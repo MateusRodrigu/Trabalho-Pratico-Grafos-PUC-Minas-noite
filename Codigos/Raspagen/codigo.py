@@ -8,32 +8,21 @@ from tqdm import tqdm
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# Carrega variáveis do arquivo .env (na pasta Codigos/) e do ambiente
+
 load_dotenv()
-
-# Lê variáveis de ambiente (não deixe o token hardcoded no código!)
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "strongpassword")
-OWNER = os.getenv("OWNER")
-REPO = os.getenv("REPO")
+GITHUB_TOKEN= "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"
+NEO4J_URI= "bolt://localhost:7687"
+NEO4J_USER= "neo4j"
+NEO4J_PASSWORD= "strongpassword"
+OWNER= "DrewThomasson"
+REPO= "ebook2audiobook"
 
 
-missing = [name for name, val in [
-    ("GITHUB_TOKEN", GITHUB_TOKEN),
-    ("OWNER", OWNER),
-    ("REPO", REPO),
-    ("NEO4J_URI", NEO4J_URI),
-    ("NEO4J_USER", NEO4J_USER),
-    ("NEO4J_PASSWORD", NEO4J_PASSWORD),
-] if not val]
-if missing:
-    raise SystemExit(f"Variáveis ausentes: {', '.join(missing)}. Verifique seu arquivo .env.")
+if not all([GITHUB_TOKEN, OWNER, REPO, NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD]):
+    raise SystemExit("Variáveis de ambiente faltando. Defina GITHUB_TOKEN, OWNER, REPO, NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD.")
 
 HEADERS = {
-    # GitHub ainda aceita o prefixo 'token', mas 'Bearer' é o formato moderno
-    "Authorization": f"Bearer {GITHUB_TOKEN}",
+    "Authorization": f"token {GITHUB_TOKEN}",
     "Accept": "application/vnd.github.v3+json"
 }
 
