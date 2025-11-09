@@ -8,9 +8,9 @@ from tqdm import tqdm
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-
+# Carrega .env
 load_dotenv()
-GITHUB_TOKEN= "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"
+GITHUB_TOKEN= 
 NEO4J_URI= "bolt://localhost:7687"
 NEO4J_USER= "neo4j"
 NEO4J_PASSWORD= "strongpassword"
