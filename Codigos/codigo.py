@@ -10,7 +10,7 @@ from urllib3.util.retry import Retry
 
 # Carrega .env
 load_dotenv()
-GITHUB_TOKEN= 
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 NEO4J_URI= "bolt://localhost:7687"
 NEO4J_USER= "neo4j"
 NEO4J_PASSWORD= "strongpassword"
