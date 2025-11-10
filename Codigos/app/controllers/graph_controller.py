@@ -1,25 +1,24 @@
-from app.models.adjacency_matrix_graph import AdjacencyMatrixGraph
+import os
+from dotenv import load_dotenv
+from app.services.graph_builder_service import GraphBuilderService
 
-def gerar_grafo_exemplo():
-    # cria um grafo de 4 vértices
-    g = AdjacencyMatrixGraph(4)
+# Carrega variáveis de ambiente do .env
+load_dotenv()
 
-    # adiciona algumas arestas
-    g.addEdge(0, 1)
-    g.addEdge(1, 2)
-    g.addEdge(2, 3)
-    g.setEdgeWeight(0, 1, 2.5)
+NEO4J_URI = os.getenv("NEO4J_URI")
+NEO4J_USER = os.getenv("NEO4J_USER")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
-    # mostra no terminal (opcional)
-    print("Vértices:", g.getVertexCount())
-    print("Arestas:", g.getEdgeCount())
-    print("Grafo conectado?", g.isConnected())
+def gerar_grafo_do_banco():
+    if not all([NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD]):
+        raise SystemExit("Erro: faltam variáveis de ambiente no .env (NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)")
 
-    # exporta o grafo
-    g.exportToGEPHI("grafo_teste.csv")
-    print("Arquivo 'grafo_teste.csv' criado com sucesso!")
+    builder = GraphBuilderService(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
+    graph, users = builder.build_graph_from_db()
+    builder.close()
 
+    graph.exportToGEPHI("grafo_neo4j.csv")
+    print("Arquivo 'grafo_neo4j.csv' criado com sucesso!")
 
-# executa se o arquivo for rodado diretamente
 if __name__ == "__main__":
-    gerar_grafo_exemplo()
+    gerar_grafo_do_banco()
