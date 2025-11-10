@@ -17,8 +17,8 @@ def gerar_grafo_do_banco():
     graph, users = builder.build_graph_from_db()
     builder.close()
 
-    graph.exportToGEPHI("grafo_neo4j.csv")
-    print("Arquivo 'grafo_neo4j.csv' criado com sucesso!")
+    graph.exportToGEPHI("matriz-de-adjacencia-neo4j.csv")
+    print("Arquivo 'matriz-de-adjacencia-neo4j.csv' criado com sucesso!")
 
 if __name__ == "__main__":
     gerar_grafo_do_banco()
