@@ -31,6 +31,7 @@ class EdgeIn(BaseModel):
     u: int
     v: int
     weight: Optional[float] = 1.0
+    implementation: Optional[str] = None
 
 
 class LoadFromDbIn(BaseModel):
@@ -88,10 +89,69 @@ def _ensure_graph_as_list():
     return _convert_matrix_to_list(graph_obj)
 
 
+def _ensure_graph(prefer: Optional[str] = None):
+    """Ensure and return a graph object using the preferred implementation.
+
+    If `prefer` startswith 'mat' the server will ensure the global `graph_obj`
+    is an `AdjacencyMatrixGraph` (converting and persisting if needed). Otherwise
+    it will ensure an `AdjacencyListGraph` instance.
+    Returns the graph object (possibly converted) and updates `graph_impl`.
+    """
+    global graph_obj, graph_impl
+    if graph_obj is None:
+        raise HTTPException(status_code=404, detail="No graph loaded")
+    if not prefer:
+        return graph_obj
+
+
+    
+
+    pref = prefer.lower()
+    with state_lock:
+        if pref.startswith('mat'):
+            if isinstance(graph_obj, AdjacencyMatrixGraph):
+                return graph_obj
+            # convert list -> matrix and persist
+            graph_obj = _convert_list_to_matrix(graph_obj)
+            graph_impl = 'matrix'
+            return graph_obj
+        else:
+            if isinstance(graph_obj, AdjacencyListGraph):
+                return graph_obj
+            # convert matrix -> list and persist
+            graph_obj = _convert_matrix_to_list(graph_obj)
+            graph_impl = 'list'
+            return graph_obj
+
+
+def _get_list_for_algorithm(prefer: Optional[str] = None) -> AdjacencyListGraph:
+    """Return an AdjacencyListGraph instance suitable for running the list-based algorithms.
+
+    This function converts a matrix to a list in-memory for the algorithm if needed,
+    but does NOT persistently change the global `graph_obj` when the caller requested
+    the matrix representation. If the caller prefers list or no preference, the
+    function will return a list instance (converting and persisting only when the
+    global graph is currently a matrix and no explicit matrix preference is requested).
+    """
+    if graph_obj is None:
+        raise HTTPException(status_code=404, detail="No graph loaded")
+    # if caller explicitly prefers matrix, run algorithm on a temporary converted list
+    if prefer and prefer.lower().startswith('mat'):
+        if isinstance(graph_obj, AdjacencyMatrixGraph):
+            return _convert_matrix_to_list(graph_obj)
+        # if graph_obj already a list, return it
+        if isinstance(graph_obj, AdjacencyListGraph):
+            return graph_obj
+    # prefer list (or no preference): return/persist list representation
+    if isinstance(graph_obj, AdjacencyListGraph):
+        return graph_obj
+    return _convert_matrix_to_list(graph_obj)
+
+
 @app.get("/graph/bfs")
-def api_bfs(start_index: Optional[int] = Query(None), start_user: Optional[str] = Query(None)):
+def api_bfs(start_index: Optional[int] = Query(None), start_user: Optional[str] = Query(None), implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     # determine start
     if start_index is None and start_user is None:
         raise HTTPException(status_code=400, detail="Provide start_index or start_user")
@@ -109,9 +169,9 @@ def api_bfs(start_index: Optional[int] = Query(None), start_user: Optional[str] 
 
 
 @app.get("/graph/dfs")
-def api_dfs(start_index: Optional[int] = Query(None), start_user: Optional[str] = Query(None), mode: str = Query("iterative")):
+def api_dfs(start_index: Optional[int] = Query(None), start_user: Optional[str] = Query(None), mode: str = Query("iterative"), implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     if start_index is None and start_user is None:
         raise HTTPException(status_code=400, detail="Provide start_index or start_user")
     if start_user is not None:
@@ -129,9 +189,9 @@ def api_dfs(start_index: Optional[int] = Query(None), start_user: Optional[str] 
 
 
 @app.get("/graph/shortest_path")
-def api_shortest_path(source_index: Optional[int] = Query(None), target_index: Optional[int] = Query(None), source_user: Optional[str] = Query(None), target_user: Optional[str] = Query(None)):
+def api_shortest_path(source_index: Optional[int] = Query(None), target_index: Optional[int] = Query(None), source_user: Optional[str] = Query(None), target_user: Optional[str] = Query(None), implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     if source_index is None and source_user is None:
         raise HTTPException(status_code=400, detail="Provide source_index or source_user")
     if target_index is None and target_user is None:
@@ -152,9 +212,9 @@ def api_shortest_path(source_index: Optional[int] = Query(None), target_index: O
 
 
 @app.get("/graph/dijkstra")
-def api_dijkstra(start_index: Optional[int] = Query(None), start_user: Optional[str] = Query(None)):
+def api_dijkstra(start_index: Optional[int] = Query(None), start_user: Optional[str] = Query(None), implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     if start_index is None and start_user is None:
         raise HTTPException(status_code=400, detail="Provide start_index or start_user")
     if start_user is not None:
@@ -169,9 +229,9 @@ def api_dijkstra(start_index: Optional[int] = Query(None), start_user: Optional[
 
 
 @app.get("/graph/khop")
-def api_khop(vertex_index: Optional[int] = Query(None), vertex_user: Optional[str] = Query(None), k: int = Query(...)):
+def api_khop(vertex_index: Optional[int] = Query(None), vertex_user: Optional[str] = Query(None), k: int = Query(...), implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     if vertex_index is None and vertex_user is None:
         raise HTTPException(status_code=400, detail="Provide vertex_index or vertex_user")
     if vertex_user is not None:
@@ -186,9 +246,9 @@ def api_khop(vertex_index: Optional[int] = Query(None), vertex_user: Optional[st
 
 
 @app.get("/graph/scc")
-def api_scc():
+def api_scc(implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     try:
         sccs = svc.find_strongly_connected_components(lg)
         return {"sccs": [list(s) for s in sccs]}
@@ -197,9 +257,9 @@ def api_scc():
 
 
 @app.get("/graph/wcc")
-def api_wcc():
+def api_wcc(implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     try:
         wccs = svc.find_weakly_connected_components(lg)
         return {"wccs": [list(s) for s in wccs]}
@@ -208,9 +268,9 @@ def api_wcc():
 
 
 @app.get("/graph/has_cycle")
-def api_has_cycle():
+def api_has_cycle(implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     try:
         result = svc.has_cycle(lg)
         return {"has_cycle": result}
@@ -219,9 +279,9 @@ def api_has_cycle():
 
 
 @app.get("/graph/topo_sort")
-def api_topo_sort():
+def api_topo_sort(implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     try:
         topo = svc.topological_sort(lg)
         return {"topological_sort": topo}
@@ -230,9 +290,9 @@ def api_topo_sort():
 
 
 @app.get("/graph/export_edges")
-def api_export_edges(filename: Optional[str] = Query("edge_list.txt")):
+def api_export_edges(filename: Optional[str] = Query("edge_list.txt"), implementation: Optional[str] = Query(None)):
     repo, svc = _ensure_repo_service()
-    lg = _ensure_graph_as_list()
+    lg = _get_list_for_algorithm(prefer=implementation)
     safe_name = os.path.basename(filename)
     try:
         svc.export_edge_list(lg, safe_name)
@@ -302,9 +362,12 @@ def get_last_mapping():
 
 
 @app.get("/graph/info")
-def graph_info():
+def graph_info(implementation: Optional[str] = Query(None)):
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
+    # If caller requested a representation, ensure it (this may convert and persist)
+    if implementation:
+        _ensure_graph(prefer=implementation)
     return {
         "implementation": graph_impl,
         "vertices": graph_obj.getVertexCount(),
@@ -320,14 +383,15 @@ def add_edge(e: EdgeIn):
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
+        # ensure representation preferred by the caller (will persist conversion)
+        g = _ensure_graph(prefer=e.implementation)
         with state_lock:
             # addEdge should be idempotent; call it first
-            graph_obj.addEdge(e.u, e.v)
+            g.addEdge(e.u, e.v)
             # set weight (classes may raise if edge nonexistent)
             try:
-                graph_obj.setEdgeWeight(e.u, e.v, float(e.weight))
+                g.setEdgeWeight(e.u, e.v, float(e.weight))
             except Exception:
-                # for some implementations setEdgeWeight requires existing edge; ensure existence
                 pass
         return {"status": "ok", "u": e.u, "v": e.v}
     except IndexError as ie:
@@ -339,12 +403,13 @@ def add_edge(e: EdgeIn):
 
 
 @app.delete("/graph/edge")
-def delete_edge(u: int = Query(...), v: int = Query(...)):
+def delete_edge(u: int = Query(...), v: int = Query(...), implementation: Optional[str] = Query(None)):
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
+        g = _ensure_graph(prefer=implementation)
         with state_lock:
-            graph_obj.removeEdge(u, v)
+            g.removeEdge(u, v)
         return {"status": "deleted", "u": u, "v": v}
     except IndexError as ie:
         raise HTTPException(status_code=400, detail=str(ie))
@@ -353,24 +418,28 @@ def delete_edge(u: int = Query(...), v: int = Query(...)):
 
 
 @app.get("/graph/edge")
-def has_edge(u: int = Query(...), v: int = Query(...)):
+def has_edge(u: int = Query(...), v: int = Query(...), implementation: Optional[str] = Query(None)):
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
-        exists = graph_obj.hasEdge(u, v)
-        weight = graph_obj.getEdgeWeight(u, v) if exists else None
+        g = _ensure_graph(prefer=implementation)
+        exists = g.hasEdge(u, v)
+        weight = g.getEdgeWeight(u, v) if exists else None
         return {"exists": exists, "weight": weight}
     except IndexError as ie:
         raise HTTPException(status_code=400, detail=str(ie))
 
 
 @app.get("/graph/export")
-def export_graph(filename: Optional[str] = Query("graph_export.csv")):
+def export_graph(filename: Optional[str] = Query("graph_export.csv"), implementation: Optional[str] = Query(None)):
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     # ensure safe filename
     safe_name = os.path.basename(filename)
     try:
+        # if caller requested a representation, ensure it (may convert and persist)
+        if implementation:
+            _ensure_graph(prefer=implementation)
         with state_lock:
             graph_obj.exportToGEPHI(safe_name)
         return FileResponse(path=safe_name, filename=safe_name, media_type='text/csv')

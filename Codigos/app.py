@@ -67,11 +67,31 @@ API_BASE = os.environ.get("API_BASE") or "http://127.0.0.1:8000"
 
 
 def api_post(path: str, json=None):
-    return requests.post(urljoin(API_BASE, path), json=json)
+    # inject implementation param automatically from session state unless caller provided one
+    impl = None
+    if st.session_state.get('implementation'):
+        # session stores UI label or internal; accept both
+        if st.session_state['implementation'] in ("Lista de Adjacência", "list"):
+            impl = 'list'
+        elif st.session_state['implementation'] in ("Matriz de Adjacência", "matrix"):
+            impl = 'matrix'
+    body = dict(json) if json else {}
+    if impl and 'implementation' not in body:
+        body['implementation'] = impl
+    return requests.post(urljoin(API_BASE, path), json=body)
 
 
 def api_get(path: str, params=None):
-    return requests.get(urljoin(API_BASE, path), params=params)
+    impl = None
+    if st.session_state.get('implementation'):
+        if st.session_state['implementation'] in ("Lista de Adjacência", "list"):
+            impl = 'list'
+        elif st.session_state['implementation'] in ("Matriz de Adjacência", "matrix"):
+            impl = 'matrix'
+    qp = dict(params) if params else {}
+    if impl and 'implementation' not in qp:
+        qp['implementation'] = impl
+    return requests.get(urljoin(API_BASE, path), params=qp)
 
 
 def api_download_text(path: str, params=None):
@@ -163,6 +183,8 @@ with st.sidebar:
         ["Lista de Adjacência", "Matriz de Adjacência"],
         help="Lista: melhor para grafos esparsos (GitHub). Matriz: melhor para análises matriciais."
     )
+    # persist UI choice so api helpers can inject the correct parameter
+    st.session_state.implementation = implementation
     
     # Tipo de grafo
     graph_type_map = {
