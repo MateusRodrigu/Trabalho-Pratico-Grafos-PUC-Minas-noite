@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-from app.models.adjacency_matrix_graph import AdjacencyMatrixGraph
+from ..models.adjacency_matrix_graph import AdjacencyMatrixGraph
 
 class GraphBuilderService:
     def __init__(self, uri, user, password):

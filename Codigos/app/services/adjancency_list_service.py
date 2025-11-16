@@ -1,7 +1,7 @@
 from typing import List, Tuple, Dict, Set, Optional, Deque
 from collections import deque, defaultdict
-from app.models.adjancency_list_graph import AdjacencyListGraph
-from app.repositories.neo4j_repository import Neo4jRepository
+from ..models.adjancency_list_graph import AdjacencyListGraph
+from ..repositories.neo4j_repository import Neo4jRepository
 
 
 class AdjacencyListService:

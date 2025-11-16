@@ -1,8 +1,8 @@
 from typing import Dict, List, Tuple, Optional
-from app.repositories.neo4j_repository import Neo4jRepository
-from app.services.graph_builder_service import GraphBuilderService
-from app.services.graph_analysis_service import GraphAnalysisService
-from app.models.adjacency_list_graph import AdjacencyListGraph
+from ..repositories.neo4j_repository import Neo4jRepository
+from ..services.graph_builder_service import GraphBuilderService
+from ..services.graph_analysis_service import GraphAnalysisService
+from ..models.adjacency_list_graph import AdjacencyListGraph
 
 
 class GraphController:

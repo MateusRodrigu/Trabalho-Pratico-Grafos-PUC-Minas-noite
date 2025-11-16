@@ -1,4 +1,4 @@
-from app.models.abstract_graph import AbstractGraph
+from .abstract_graph import AbstractGraph
 import csv
 
 class AdjacencyMatrixGraph(AbstractGraph):

@@ -1,6 +1,6 @@
 from neo4j import GraphDatabase
 from typing import List, Dict, Tuple
-from app.config.settings import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+from ..config.settings import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 
 class Neo4jRepository:
     """

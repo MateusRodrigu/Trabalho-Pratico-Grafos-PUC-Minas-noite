@@ -1,5 +1,5 @@
 import csv
-from app.models.abstract_graph import AbstractGraph
+from .abstract_graph import AbstractGraph
 
 
 class AdjacencyListGraph(AbstractGraph):
