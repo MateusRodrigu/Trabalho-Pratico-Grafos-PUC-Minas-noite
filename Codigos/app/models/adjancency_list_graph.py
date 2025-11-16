@@ -17,7 +17,7 @@ class AdjacencyListGraph(AbstractGraph):
         self.adj_list = {i: [] for i in range(num_vertices)}  # dicionário: vértice -> lista de sucessores
         self.edge_weights = {}  # chave: (u, v), valor: peso da aresta
         self.vertex_weights = [0.0 for _ in range(num_vertices)]
-
+        self.edge_count = 0  # <-- ADICIONE ESTA LINHA
     # ------------------------------
     # MÉTODOS OBRIGATÓRIOS DA API
     # ------------------------------
@@ -26,7 +26,7 @@ class AdjacencyListGraph(AbstractGraph):
         return self.num_vertices
 
     def getEdgeCount(self) -> int:
-        return sum(len(v) for v in self.adj_list.values())
+         return self.edge_count
 
     def hasEdge(self, u: int, v: int) -> bool:
         self._validate_vertex(u)
@@ -144,3 +144,4 @@ class AdjacencyListGraph(AbstractGraph):
             for u, vizinhos in self.adj_list.items():
                 for v in vizinhos:
                     writer.writerow([u, v, self.getEdgeWeight(u, v)])
+                    
