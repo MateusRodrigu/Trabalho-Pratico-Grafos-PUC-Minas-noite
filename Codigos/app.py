@@ -24,7 +24,7 @@ from urllib.parse import urljoin
 
 st.set_page_config(
     page_title="Analisador de Grafos GitHub",
-    page_icon="🔍",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -165,7 +165,7 @@ if 'edges' not in st.session_state:
 # HEADER
 # ========================================
 
-st.markdown('<h1 class="main-header">🧠 Analisador de Rede de Colaboração GitHub</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-header">Analisador de Rede de Colaboração GitHub</h1>', unsafe_allow_html=True)
 st.markdown("**Análise completa de grafos de colaboração usando Matriz de Adjacência e Lista de Adjacência**")
 st.divider()
 
@@ -175,7 +175,7 @@ st.divider()
 # ========================================
 
 with st.sidebar:
-    st.header("⚙️ Configurações do Grafo")
+    st.header("Configurações do Grafo")
     
     # Escolha da implementação
     implementation = st.radio(
@@ -202,7 +202,7 @@ with st.sidebar:
     graph_type = graph_type_map[graph_type_display]
     
     # Botão para carregar grafo
-    if st.button("🔄 Carregar Grafo", type="primary", use_container_width=True):
+    if st.button("Carregar Grafo", type="primary", use_container_width=True):
         with st.spinner(f"Construindo grafo {implementation.lower()}..."):
             try:
                 # Call API to load graph from DB (the app previously used repo/service to build from DB)
@@ -240,15 +240,15 @@ with st.sidebar:
                 st.session_state.mapping = mapping
                 st.session_state.edges = edges
 
-                st.success(f"✅ Grafo carregado: {info.get('vertices')} vértices, {info.get('edges')} arestas")
+                st.success(f"Grafo carregado: {info.get('vertices')} vértices, {info.get('edges')} arestas")
             except Exception as e:
-                st.error(f"❌ Erro ao carregar grafo: {e}")
+                st.error(f"Erro ao carregar grafo: {e}")
     
     st.divider()
     
     # Informações do grafo atual
     if st.session_state.graph_loaded:
-        st.subheader("📊 Grafo Atual")
+        st.subheader("Grafo Atual")
         num_vertices, adjacency, in_adj, weight_map = build_graph_structures(st.session_state.edges, st.session_state.mapping)
         st.info(f"""
         **Tipo**: {st.session_state.graph_type}  
@@ -257,7 +257,7 @@ with st.sidebar:
         **Arestas**: {len(st.session_state.edges)}
         """)
 
-        if st.button("🗑️ Limpar Grafo", use_container_width=True):
+        if st.button("Limpar Grafo", use_container_width=True):
             st.session_state.graph_loaded = False
             st.session_state.graph_type = None
             st.session_state.implementation = None
@@ -271,7 +271,7 @@ with st.sidebar:
 # ========================================
 
 if not st.session_state.graph_loaded:
-    st.info("👈 **Configure e carregue um grafo na barra lateral para começar a análise**")
+    st.info("**Configure e carregue um grafo na barra lateral para começar a análise**")
     st.stop()
 
 
@@ -280,13 +280,13 @@ if not st.session_state.graph_loaded:
 # ========================================
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "📊 Visão Geral",
-    "🔍 Busca e Caminhos", 
-    "🎯 Centralidade",
-    "🌐 Componentes",
-    "🔄 Ciclos e Ordem",
-    "📈 Métricas Avançadas",
-    "💾 Exportação"
+    "Visão Geral",
+    "Busca e Caminhos", 
+    "Centralidade",
+    "Componentes",
+    "Ciclos e Ordem",
+    "Métricas Avançadas",
+    "Exportação"
 ])
 
 
@@ -295,7 +295,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 # ========================================
 
 with tab1:
-    st.header("📊 Visão Geral do Grafo")
+    st.header("Visão Geral do Grafo")
 
     # Reconstruct local structures from edge export
     edges = st.session_state.edges
@@ -317,7 +317,7 @@ with tab1:
         st.metric("Arestas", len(edges))
     with col3:
         is_connected = info.get('is_connected') if info else None
-        st.metric("Conectado", "✅ Sim" if is_connected else ("❌ Não" if is_connected is not None else "Não disponível"))
+        st.metric("Conectado", "Sim" if is_connected else ("Não" if is_connected is not None else "Não disponível"))
     with col4:
         is_empty = (len(edges) == 0)
         st.metric("Vazio", "Sim" if is_empty else "Não")
@@ -325,7 +325,7 @@ with tab1:
     st.divider()
 
     # Visualização do grafo
-    st.subheader("🎨 Visualização Interativa")
+    st.subheader("Visualização Interativa")
 
     if st.button("Gerar Visualização (Pyvis)"):
         with st.spinner("Renderizando grafo..."):
@@ -375,7 +375,7 @@ with tab1:
     st.divider()
 
     # Estatísticas de grau
-    st.subheader("📉 Distribuição de Graus")
+    st.subheader("Distribuição de Graus")
 
     col1, col2 = st.columns(2)
 
@@ -395,7 +395,7 @@ with tab1:
 # ========================================
 
 with tab2:
-    st.header("🔍 Algoritmos de Busca e Caminhos")
+    st.header("Algoritmos de Busca e Caminhos")
 
     edges = st.session_state.edges
     mapping = st.session_state.mapping
@@ -408,9 +408,9 @@ with tab2:
         users = [str(i) for i in range(num_vertices)]
 
     if st.session_state.implementation != "Lista de Adjacência":
-        st.info("🔹 **Algoritmos de busca e caminhos estão disponíveis apenas para Lista de Adjacência**")
+        st.info("**Algoritmos de busca e caminhos estão disponíveis apenas para Lista de Adjacência**")
     else:
-        st.subheader("1️⃣ BFS - Busca em Largura")
+        st.subheader("BFS - Busca em Largura")
         col1, col2 = st.columns([2, 1])
 
         with col1:
@@ -429,13 +429,13 @@ with tab2:
                         for k, v in sorted({int(k): v for k, v in distances.items()}.items(), key=lambda x: x[1])
                     ])
                     st.dataframe(df_distances, use_container_width=True)
-                    st.info(f"✅ Alcançados: {len(distances)} vértices")
+                    st.info(f"Alcançados: {len(distances)} vértices")
                 except Exception as e:
                     st.error(f"Erro BFS: {e}")
 
         st.divider()
 
-        st.subheader("2️⃣ DFS - Busca em Profundidade")
+        st.subheader("DFS - Busca em Profundidade")
         col1, col2, col3 = st.columns([2, 1, 1])
         with col1:
             start_user_dfs = st.selectbox("Usuário inicial (DFS)", users, key="dfs_start")
@@ -451,13 +451,13 @@ with tab2:
                     visited_users = [idx_label(int(v), mapping) for v in visited]
                     st.write("**Ordem de visita:**")
                     st.write(" → ".join(visited_users[:20]) + ("..." if len(visited_users) > 20 else ""))
-                    st.info(f"✅ Visitados: {len(visited)} vértices")
+                    st.info(f"Visitados: {len(visited)} vértices")
                 except Exception as e:
                     st.error(f"Erro DFS: {e}")
 
         st.divider()
 
-        st.subheader("3️⃣ Caminho Mais Curto")
+        st.subheader("Caminho Mais Curto")
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             source_user = st.selectbox("Origem", users, key="path_source")
@@ -472,16 +472,16 @@ with tab2:
                     path = r.json().get('path')
                     if path:
                         path_users = [idx_label(v, mapping) for v in path]
-                        st.success(f"✅ Caminho encontrado ({len(path)} saltos)")
+                        st.success(f"Caminho encontrado ({len(path)} saltos)")
                         st.write(" → ".join(path_users))
                     else:
-                        st.warning("❌ Não há caminho entre esses usuários")
+                        st.warning("Não há caminho entre esses usuários")
                 except Exception as e:
                     st.error(f"Erro shortest_path: {e}")
 
         st.divider()
 
-        st.subheader("4️⃣ Dijkstra (Caminho Ponderado)")
+        st.subheader("Dijkstra (Caminho Ponderado)")
         col1, col2 = st.columns([2, 1])
         with col1:
             start_dijkstra = st.selectbox("Usuário inicial (Dijkstra)", users, key="dijkstra")
@@ -504,7 +504,7 @@ with tab2:
 
         st.divider()
 
-        st.subheader("5️⃣ K-Hop Neighbors")
+        st.subheader("K-Hop Neighbors")
         col1, col2, col3 = st.columns([2, 1, 1])
         with col1:
             khop_user = st.selectbox("Usuário central", users, key="khop")
@@ -518,7 +518,7 @@ with tab2:
                     r.raise_for_status()
                     neighbors = r.json().get('neighbors', [])
                     neighbor_users = [idx_label(int(v), mapping) for v in neighbors]
-                    st.success(f"✅ {len(neighbors)} vizinhos encontrados a {k} saltos")
+                    st.success(f"{len(neighbors)} vizinhos encontrados a {k} saltos")
                     st.write(", ".join(sorted(neighbor_users)[:30]))
                 except Exception as e:
                     st.error(f"Erro k-hop: {e}")
@@ -529,7 +529,7 @@ with tab2:
 # ========================================
 
 with tab3:
-    st.header("🎯 Métricas de Centralidade")
+    st.header("Métricas de Centralidade")
     
     analysis_service = st.session_state.get('analysis_service')
 
@@ -573,7 +573,7 @@ with tab3:
 # ========================================
 
 with tab4:
-    st.header("🌐 Análise de Componentes")
+    st.header("Análise de Componentes")
 
     edges = st.session_state.edges
     mapping = st.session_state.mapping
@@ -589,7 +589,7 @@ with tab4:
                     r = api_get("/graph/scc")
                     r.raise_for_status()
                     sccs = r.json().get('sccs', [])
-                    st.success(f"✅ {len(sccs)} componentes encontrados")
+                    st.success(f"{len(sccs)} componentes encontrados")
 
                     sizes = sorted([len(scc) for scc in sccs], reverse=True)
                     df_sccs = pd.DataFrame({
@@ -611,7 +611,7 @@ with tab4:
                     r = api_get("/graph/wcc")
                     r.raise_for_status()
                     wccs = r.json().get('wccs', [])
-                    st.success(f"✅ {len(wccs)} componentes encontrados")
+                    st.success(f"{len(wccs)} componentes encontrados")
 
                     sizes = sorted([len(wcc) for wcc in wccs], reverse=True)
                     df_wccs = pd.DataFrame({
@@ -630,7 +630,7 @@ with tab4:
 # ========================================
 
 with tab5:
-    st.header("🔄 Detecção de Ciclos e Ordenação Topológica")
+    st.header("Detecção de Ciclos e Ordenação Topológica")
 
     if st.session_state.implementation == "Lista de Adjacência":
         col1, col2 = st.columns(2)
@@ -644,9 +644,9 @@ with tab5:
                     r.raise_for_status()
                     has_cycle = r.json().get('has_cycle')
                     if has_cycle:
-                        st.error("❌ O grafo contém ciclos")
+                        st.error("O grafo contém ciclos")
                     else:
-                        st.success("✅ O grafo é acíclico (DAG)")
+                        st.success("O grafo é acíclico (DAG)")
                 except Exception as e:
                     st.error(f"Erro ao verificar ciclo: {e}")
 
@@ -660,14 +660,14 @@ with tab5:
                     topo_sort = r.json().get('topological_sort')
                     if topo_sort:
                         topo_users = [idx_label(v, st.session_state.mapping) for v in topo_sort[:50]]
-                        st.success("✅ Ordenação topológica encontrada")
+                        st.success("Ordenação topológica encontrada")
                         df_topo = pd.DataFrame({
                             'Posição': range(1, len(topo_users) + 1),
                             'Usuário': topo_users
                         })
                         st.dataframe(df_topo, use_container_width=True)
                     else:
-                        st.error("❌ Grafo contém ciclos - ordenação topológica impossível")
+                        st.error("Grafo contém ciclos - ordenação topológica impossível")
                 except Exception as e:
                     st.error(f"Erro topo_sort: {e}")
     else:
@@ -679,7 +679,7 @@ with tab5:
 # ========================================
 
 with tab6:
-    st.header("📈 Métricas Avançadas")
+    st.header("Métricas Avançadas")
 
     col1, col2 = st.columns(2)
 
@@ -708,7 +708,7 @@ with tab6:
 # ========================================
 
 with tab7:
-    st.header("💾 Exportação de Dados")
+    st.header("Exportação de Dados")
 
     st.subheader("Exportar para Gephi")
 
@@ -718,10 +718,10 @@ with tab7:
         try:
             # Request server to export CSV and return file bytes
             content = api_download_bytes("/graph/export", params={"filename": gephi_filename})
-            st.success(f"✅ Pedido de exportação enviado: {gephi_filename}")
+            st.success(f"Pedido de exportação enviado: {gephi_filename}")
 
             st.download_button(
-                "⬇️ Download CSV",
+                "Download CSV",
                 content,
                 file_name=gephi_filename,
                 mime="text/csv"
@@ -740,10 +740,10 @@ with tab7:
             try:
                 # Download plain text edge list from API
                 edges_txt = api_download_text("/graph/export_edges", params={"filename": edge_filename})
-                st.success(f"✅ Lista de arestas gerada: {edge_filename}")
+                st.success(f"Lista de arestas gerada: {edge_filename}")
 
                 st.download_button(
-                    "⬇️ Download Lista de Arestas",
+                    "Download Lista de Arestas",
                     edges_txt,
                     file_name=edge_filename,
                     mime="text/plain"
@@ -777,7 +777,7 @@ with tab7:
         st.code(json_str, language='json')
 
         st.download_button(
-            "⬇️ Download JSON",
+            "Download JSON",
             json_str,
             file_name="graph_statistics.json",
             mime="application/json"
@@ -792,7 +792,7 @@ st.divider()
 st.markdown("""
 <div style='text-align: center; color: #666; padding: 2rem 0;'>
     <p><strong>Analisador de Grafos GitHub</strong> | PUC Minas - Teoria de Grafos e Computabilidade</p>
-    <p>Desenvolvido com ❤️ usando Streamlit, NetworkX e Neo4j</p>
+    <p>Desenvolvido com carinho usando Streamlit, NetworkX e Neo4j</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -804,7 +804,7 @@ st.markdown("""
 def show_graph_comparison():
     """Mostra comparação entre implementações."""
     st.sidebar.divider()
-    st.sidebar.subheader("📊 Comparação de Implementações")
+    st.sidebar.subheader("Comparação de Implementações")
     
     comparison_data = {
         'Característica': [
@@ -841,7 +841,7 @@ show_graph_comparison()
 # QUERIES CUSTOMIZADAS (BONUS)
 # ========================================
 
-with st.expander("🔬 Consultas Customizadas (Avançado)"):
+with st.expander("Consultas Customizadas (Avançado)"):
     st.subheader("Executar Operações Personalizadas")
 
     edges = st.session_state.edges
@@ -881,9 +881,9 @@ with st.expander("🔬 Consultas Customizadas (Avançado)"):
             v = user_to_index[v_user]
             result = v in adjacency.get(u, [])
             if result:
-                st.success(f"✅ {v_user} é sucessor de {u_user}")
+                st.success(f"{v_user} é sucessor de {u_user}")
             else:
-                st.info(f"❌ {v_user} NÃO é sucessor de {u_user}")
+                st.info(f"{v_user} NÃO é sucessor de {u_user}")
 
     elif operation == "Verificar se dois vértices são predecessores":
         col1, col2 = st.columns(2)
@@ -897,9 +897,9 @@ with st.expander("🔬 Consultas Customizadas (Avançado)"):
             v = user_to_index[v_user]
             result = u in adjacency.get(v, [])
             if result:
-                st.success(f"✅ {u_user} é predecessor de {v_user}")
+                st.success(f"{u_user} é predecessor de {v_user}")
             else:
-                st.info(f"❌ {u_user} NÃO é predecessor de {v_user}")
+                st.info(f"{u_user} NÃO é predecessor de {v_user}")
 
     elif operation == "Verificar se duas arestas são divergentes":
         st.write("**Aresta 1:**")
@@ -923,9 +923,9 @@ with st.expander("🔬 Consultas Customizadas (Avançado)"):
             v2 = user_to_index[v2_user]
             result = (u1 == u2 and v1 != v2)
             if result:
-                st.success(f"✅ As arestas ({u1_user}→{v1_user}) e ({u2_user}→{v2_user}) são DIVERGENTES")
+                st.success(f"As arestas ({u1_user}→{v1_user}) e ({u2_user}→{v2_user}) são DIVERGENTES")
             else:
-                st.info(f"❌ As arestas NÃO são divergentes")
+                st.info(f"As arestas NÃO são divergentes")
 
     elif operation == "Verificar se duas arestas são convergentes":
         st.write("**Aresta 1:**")
@@ -949,9 +949,9 @@ with st.expander("🔬 Consultas Customizadas (Avançado)"):
             v2 = user_to_index[v2_user]
             result = (v1 == v2 and u1 != u2)
             if result:
-                st.success(f"✅ As arestas ({u1_user}→{v1_user}) e ({u2_user}→{v2_user}) são CONVERGENTES")
+                st.success(f"As arestas ({u1_user}→{v1_user}) e ({u2_user}→{v2_user}) são CONVERGENTES")
             else:
-                st.info(f"❌ As arestas NÃO são convergentes")
+                st.info(f"As arestas NÃO são convergentes")
 
     elif operation == "Verificar se vértice é incidente a aresta":
         st.write("**Aresta:**")
@@ -969,9 +969,9 @@ with st.expander("🔬 Consultas Customizadas (Avançado)"):
             x = user_to_index[x_user]
             result = (x == u or x == v)
             if result:
-                st.success(f"✅ {x_user} é INCIDENTE à aresta ({u_user}→{v_user})")
+                st.success(f"{x_user} é INCIDENTE à aresta ({u_user}→{v_user})")
             else:
-                st.info(f"❌ {x_user} NÃO é incidente à aresta")
+                st.info(f"{x_user} NÃO é incidente à aresta")
 
     elif operation == "Obter peso de aresta específica":
         col1, col2 = st.columns(2)
@@ -985,9 +985,9 @@ with st.expander("🔬 Consultas Customizadas (Avançado)"):
             v = user_to_index[v_user]
             w = weight_map.get((u, v))
             if w is not None:
-                st.success(f"✅ Peso da aresta ({u_user}→{v_user}): **{w}**")
+                st.success(f"Peso da aresta ({u_user}→{v_user}): **{w}**")
             else:
-                st.warning(f"❌ Aresta ({u_user}→{v_user}) não existe")
+                st.warning(f"Aresta ({u_user}→{v_user}) não existe")
 
     elif operation == "Obter peso de vértice específico":
         v_user = st.selectbox("Vértice", users_list, key="vertex_weight")
@@ -1003,7 +1003,7 @@ with st.expander("🔬 Consultas Customizadas (Avançado)"):
 # ANÁLISE DE USUÁRIO INDIVIDUAL
 # ========================================
 
-with st.expander("👤 Análise Detalhada de Usuário"):
+with st.expander("Análise Detalhada de Usuário"):
     st.subheader("Perfil Completo de Colaborador")
 
     edges = st.session_state.edges
@@ -1045,7 +1045,7 @@ with st.expander("👤 Análise Detalhada de Usuário"):
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("🔗 Conexões de Saída")
+            st.subheader("Conexões de Saída")
             out_neighbors = [(v, weight_map.get((user_idx, v), 0.0)) for v in adjacency.get(user_idx, [])]
             if out_neighbors:
                 df_out = pd.DataFrame([
@@ -1057,7 +1057,7 @@ with st.expander("👤 Análise Detalhada de Usuário"):
                 st.info("Sem conexões de saída")
 
         with col2:
-            st.subheader("🔗 Conexões de Entrada")
+            st.subheader("Conexões de Entrada")
             in_neighbors = [(u, weight_map.get((u, user_idx), 0.0)) for u in in_adj.get(user_idx, [])]
             if in_neighbors:
                 df_in = pd.DataFrame([
@@ -1071,7 +1071,7 @@ with st.expander("👤 Análise Detalhada de Usuário"):
         # Centralidades (se calculadas)
         if 'centralities' in st.session_state:
             st.divider()
-            st.subheader("📊 Métricas de Centralidade")
+            st.subheader("Métricas de Centralidade")
             centralities = st.session_state.centralities
             centrality_data = {'Métrica': list(centralities.keys()), 'Valor': [centralities[metric].get(selected_user, 0) for metric in centralities.keys()]}
             df_cent = pd.DataFrame(centrality_data)
@@ -1083,7 +1083,7 @@ with st.expander("👤 Análise Detalhada de Usuário"):
 # COMPARAÇÃO ENTRE USUÁRIOS
 # ========================================
 
-with st.expander("⚖️ Comparar Usuários"):
+with st.expander("Comparar Usuários"):
     st.subheader("Comparação Entre Dois Colaboradores")
 
     edges = st.session_state.edges
@@ -1138,21 +1138,21 @@ with st.expander("⚖️ Comparar Usuários"):
         st.divider()
         st.subheader("Conexão Direta")
         if (idx1, idx2) in weight_map:
-            st.success(f"✅ {user1} → {user2} (peso: {weight_map[(idx1, idx2)]})")
+            st.success(f"{user1} → {user2} (peso: {weight_map[(idx1, idx2)]})")
         else:
-            st.info(f"❌ Sem aresta de {user1} para {user2}")
+            st.info(f"Sem aresta de {user1} para {user2}")
 
         if (idx2, idx1) in weight_map:
-            st.success(f"✅ {user2} → {user1} (peso: {weight_map[(idx2, idx1)]})")
+            st.success(f"{user2} → {user1} (peso: {weight_map[(idx2, idx1)]})")
         else:
-            st.info(f"❌ Sem aresta de {user2} para {user1}")
+            st.info(f"Sem aresta de {user2} para {user1}")
 
 
 # ========================================
 # MODO DEBUG (DESENVOLVEDOR)
 # ========================================
 
-if st.sidebar.checkbox("🔧 Modo Debug", value=False):
+if st.sidebar.checkbox("Modo Debug", value=False):
     st.sidebar.divider()
     st.sidebar.subheader("Debug Info")
     

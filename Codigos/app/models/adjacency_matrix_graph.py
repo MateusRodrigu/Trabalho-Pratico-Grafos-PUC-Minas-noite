@@ -42,13 +42,20 @@ class AdjacencyMatrixGraph(AbstractGraph):
         return self.hasEdge(v, u)
 
     def isDivergent(self, u1: int, v1: int, u2: int, v2: int) -> bool:
-        return v1 == v2 and u1 != u2
-
-    def isConvergent(self, u1: int, v1: int, u2: int, v2: int) -> bool:
         return u1 == u2 and v1 != v2
 
+    def isConvergent(self, u1: int, v1: int, u2: int, v2: int) -> bool:
+        return v1 == v2 and u1 != u2
+
     def isIncident(self, u: int, v: int, x: int) -> bool:
-        return self.matrix[u][x] != 0 or self.matrix[v][x] != 0
+        self._validate_vertex(u)
+        self._validate_vertex(v)
+        self._validate_vertex(x)
+    
+        if not self.hasEdge(u, v):
+            return False
+    
+        return x == u or x == v
 
     def getVertexInDegree(self, u: int) -> int:
         self._validate_vertex(u)
@@ -79,7 +86,6 @@ class AdjacencyMatrixGraph(AbstractGraph):
         return self.matrix[u][v]
 
     def isConnected(self) -> bool:
-        # conectividade simples: nenhum vértice isolado
         for i in range(self.num_vertices):
             if self.getVertexInDegree(i) + self.getVertexOutDegree(i) == 0:
                 return False

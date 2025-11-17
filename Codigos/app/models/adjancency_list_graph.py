@@ -70,7 +70,13 @@ class AdjacencyListGraph(AbstractGraph):
         return v1 == v2 and u1 != u2
 
     def isIncident(self, u: int, v: int, x: int) -> bool:
-        """Retorna True se o vértice x é incidente à aresta (u, v)."""
+        self._validate_vertex(u)
+        self._validate_vertex(v)
+        self._validate_vertex(x)
+    
+        if not self.hasEdge(u, v):
+            return False
+    
         return x == u or x == v
 
     def getVertexInDegree(self, u: int) -> int:
@@ -104,20 +110,8 @@ class AdjacencyListGraph(AbstractGraph):
         return self.edge_weights.get((u, v), 0.0)
 
     def isConnected(self) -> bool:
-        """
-        Retorna True se o grafo for fortemente conexo (há caminho entre todos os pares de vértices).
-        Como o grafo pode ser desconexo, retorna False se houver vértices inalcançáveis.
-        """
-        def dfs(start, visited):
-            visited[start] = True
-            for neighbor in self.adj_list[start]:
-                if not visited[neighbor]:
-                    dfs(neighbor, visited)
-
-        for start in range(self.num_vertices):
-            visited = [False] * self.num_vertices
-            dfs(start, visited)
-            if not all(visited):
+        for i in range(self.num_vertices):
+            if self.getVertexInDegree(i) + self.getVertexOutDegree(i) == 0:
                 return False
         return True
 
