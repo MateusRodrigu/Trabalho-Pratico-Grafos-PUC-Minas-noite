@@ -529,7 +529,7 @@ with tab2:
 # ========================================
 
 with tab3:
-    st.header("🎯 Métricas de Centralidade")
+    st.header(" Métricas de Centralidade")
     
     edges = st.session_state.edges
     mapping = st.session_state.mapping
@@ -561,7 +561,7 @@ with tab3:
                 
                 # 3. Closeness Centrality
                 try:
-                    centralities['Closeness'] = nx.closeness_centrality(G)
+                    centralities['Closeness'] = nfx.closeness_centrality(G)
                 except:
                     st.warning("Closeness não pôde ser calculado (grafo desconexo)")
                     centralities['Closeness'] = {node: 0.0 for node in G.nodes()}
@@ -579,7 +579,7 @@ with tab3:
                 # Salva no session state
                 st.session_state.centralities = centralities
                 
-                st.success("✅ Centralidades calculadas com sucesso!")
+                st.success(" Centralidades calculadas com sucesso!")
                 
             except Exception as e:
                 st.error(f"Erro ao calcular centralidades: {e}")
@@ -731,26 +731,341 @@ with tab6:
 
     col1, col2 = st.columns(2)
 
+   # ========================================
+# TAB 6: MÉTRICAS AVANÇADAS
+# ========================================
+
+with tab6:
+    st.header(" Métricas Avançadas")
+
+    edges = st.session_state.edges
+    mapping = st.session_state.mapping
+    num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, mapping)
+
+    # ========================================
+    # MÉTRICAS DE ESTRUTURA E COESÃO
+    # ========================================
+    
+    st.subheader(" Métricas de Estrutura e Coesão")
+    
+    col1, col2, col3 = st.columns(3)
+    
     with col1:
-        st.subheader("Métricas de Estrutura")
-        if st.button("Calcular Métricas"):
-            st.info("Métricas avançadas desabilitadas: `GraphAnalysisService` foi comentado no código.")
-
+        if st.button(" Densidade da Rede", use_container_width=True):
+            with st.spinner("Calculando densidade..."):
+                try:
+                    # Reconstrói NetworkX
+                    G = nx.DiGraph()
+                    for i in range(num_vertices):
+                        G.add_node(idx_label(i, mapping))
+                    for u, v, w in edges:
+                        G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
+                    
+                    # Calcula densidade
+                    density = nx.density(G)
+                    
+                    # Informações adicionais
+                    num_edges = G.number_of_edges()
+                    num_nodes = G.number_of_nodes()
+                    max_edges = num_nodes * (num_nodes - 1)  # grafo direcionado
+                    
+                    st.metric("Densidade da Rede", f"{density:.4f}")
+                    st.write(f"**Arestas existentes:** {num_edges}")
+                    st.write(f"**Arestas possíveis:** {max_edges}")
+                    st.write(f"**Percentual:** {density * 100:.2f}%")
+                    
+                    st.divider()
+                    st.write("**Interpretação:**")
+                    if density > 0.5:
+                        st.success(" **Rede altamente colaborativa** - Mais da metade das conexões possíveis existem")
+                    elif density > 0.3:
+                        st.info(" **Rede moderadamente colaborativa** - Boa conectividade")
+                    elif density > 0.1:
+                        st.warning(" **Rede com colaboração moderada** - Algumas conexões isoladas")
+                    else:
+                        st.error(" **Rede esparsa** - Poucas conexões, colaboração limitada")
+                    
+                    st.info(" **Significado:** Indica o quão colaborativa é a rede como um todo. Valores altos sugerem que os colaboradores interagem amplamente entre si.")
+                    
+                except Exception as e:
+                    st.error(f"Erro: {e}")
+    
     with col2:
-        st.subheader("Métricas de Distância")
-        if st.session_state.implementation == "Lista de Adjacência":
-            if st.button("Calcular Distâncias"):
-                st.info("Métricas de distância não estão disponíveis via API neste protótipo.")
-        else:
-            st.info("Métricas de distância disponíveis para Lista de Adjacência")
-
+        if st.button(" Coeficiente de Aglomeração", use_container_width=True):
+            with st.spinner("Calculando coeficiente de aglomeração..."):
+                try:
+                    # Reconstrói NetworkX
+                    G = nx.DiGraph()
+                    for i in range(num_vertices):
+                        G.add_node(idx_label(i, mapping))
+                    for u, v, w in edges:
+                        G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
+                    
+                    # Converte para não-direcionado para clustering
+                    G_undirected = G.to_undirected()
+                    
+                    # Calcula clustering
+                    avg_clustering = nx.average_clustering(G_undirected)
+                    transitivity = nx.transitivity(G_undirected)
+                    
+                    # Clustering por nó (top 10)
+                    clustering_coeffs = nx.clustering(G_undirected)
+                    top_clustered = sorted(clustering_coeffs.items(), key=lambda x: x[1], reverse=True)[:10]
+                    
+                    st.metric("Coef. Aglomeração Médio", f"{avg_clustering:.4f}")
+                    st.metric("Transitividade Global", f"{transitivity:.4f}")
+                    
+                    st.divider()
+                    st.write("**Top 10 Colaboradores mais \"Clustered\":**")
+                    df_cluster = pd.DataFrame(top_clustered, columns=['Colaborador', 'Coeficiente'])
+                    st.dataframe(df_cluster, use_container_width=True)
+                    
+                    st.divider()
+                    st.write("**Interpretação:**")
+                    if avg_clustering > 0.5:
+                        st.success(" **Alta tendência de formar clusters** - Grupos coesos e bem definidos")
+                    elif avg_clustering > 0.3:
+                        st.info(" **Moderada formação de clusters** - Alguns grupos identificáveis")
+                    else:
+                        st.warning(" **Baixa formação de clusters** - Colaboração mais distribuída")
+                    
+                    st.info(" **Significado:** Mede a tendência de colaboradores formarem pequenos grupos muito conectados (\"clusters\"). Valores altos indicam times informais bem definidos.")
+                    
+                except Exception as e:
+                    st.error(f"Erro: {e}")
+    
+    with col3:
+        if st.button(" Assortatividade", use_container_width=True):
+            with st.spinner("Calculando assortatividade..."):
+                try:
+                    # Reconstrói NetworkX
+                    G = nx.DiGraph()
+                    for i in range(num_vertices):
+                        G.add_node(idx_label(i, mapping))
+                    for u, v, w in edges:
+                        G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
+                    
+                    # Calcula assortatividade
+                    try:
+                        assortativity = nx.degree_assortativity_coefficient(G)
+                    except:
+                        assortativity = 0.0
+                    
+                    st.metric("Assortatividade de Grau", f"{assortativity:.4f}")
+                    
+                    # Distribuição de graus
+                    in_degrees = dict(G.in_degree())
+                    out_degrees = dict(G.out_degree())
+                    
+                    avg_in = sum(in_degrees.values()) / len(in_degrees)
+                    avg_out = sum(out_degrees.values()) / len(out_degrees)
+                    
+                    st.write(f"**Grau de entrada médio:** {avg_in:.2f}")
+                    st.write(f"**Grau de saída médio:** {avg_out:.2f}")
+                    
+                    # Gráfico de dispersão
+                    edge_degrees = []
+                    for u, v in G.edges():
+                        edge_degrees.append({
+                            'source_degree': G.degree(u),
+                            'target_degree': G.degree(v)
+                        })
+                    
+                    if edge_degrees:
+                        df_assort = pd.DataFrame(edge_degrees)
+                        fig = px.scatter(df_assort, x='source_degree', y='target_degree',
+                                        title='Assortatividade: Grau Origem vs Destino',
+                                        labels={'source_degree': 'Grau do Colaborador Origem',
+                                               'target_degree': 'Grau do Colaborador Destino'},
+                                        opacity=0.5)
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    st.divider()
+                    st.write("**Interpretação:**")
+                    if assortativity > 0.3:
+                        st.success(" **Rede assortativa** - Colaboradores com muitas conexões se conectam entre si (rede centralizada em hubs)")
+                    elif assortativity > -0.3:
+                        st.info(" **Rede neutra** - Sem padrão claro de conexão")
+                    else:
+                        st.warning(" **Rede disassortativa** - Colaboradores muito conectados interagem com colaboradores menos conectados (rede mais distribuída)")
+                    
+                    st.info("💡 **Significado:** Mostra se colaboradores com muitas conexões tendem a se conectar entre si (assortativa > 0) ou se interagem mais com colaboradores menos conectados (disassortativa < 0).")
+                    
+                except Exception as e:
+                    st.error(f"Erro: {e}")
+    
     st.divider()
-
-    st.subheader("Análise de Comunidades")
-    if st.button("Detectar Comunidades"):
-        st.info("Detecção de comunidades desabilitada: `GraphAnalysisService` foi comentado no código.")
-
-
+    
+    # ========================================
+    # MÉTRICAS DE COMUNIDADE
+    # ========================================
+    
+    st.subheader(" Métricas de Comunidade")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button(" Detecção de Comunidades (Modularidade)", use_container_width=True):
+            with st.spinner("Detectando comunidades e calculando modularidade..."):
+                try:
+                    # Reconstrói NetworkX
+                    G = nx.DiGraph()
+                    for i in range(num_vertices):
+                        G.add_node(idx_label(i, mapping))
+                    for u, v, w in edges:
+                        G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
+                    
+                    # Converte para não-direcionado
+                    G_undirected = G.to_undirected()
+                    
+                    # Detecta comunidades usando Greedy Modularity
+                    communities_gen = nx.community.greedy_modularity_communities(G_undirected)
+                    communities = {}
+                    for idx, comm in enumerate(communities_gen):
+                        for node in comm:
+                            communities[node] = idx
+                    
+                    num_communities = len(set(communities.values()))
+                    
+                    # Calcula modularidade
+                    partition = list(communities_gen)
+                    modularity = nx.community.modularity(G_undirected, partition)
+                    
+                    st.success(f" **{num_communities} comunidades detectadas**")
+                    st.metric("Modularidade", f"{modularity:.4f}")
+                    
+                    # Distribuição de tamanhos
+                    comm_sizes = {}
+                    for node, comm in communities.items():
+                        comm_sizes[comm] = comm_sizes.get(comm, 0) + 1
+                    
+                    df_comm = pd.DataFrame([
+                        {
+                            "Comunidade": f"C{k+1}", 
+                            "Tamanho": v, 
+                            "Percentual": f"{v/num_vertices*100:.1f}%"
+                        }
+                        for k, v in sorted(comm_sizes.items(), key=lambda x: x[1], reverse=True)
+                    ])
+                    
+                    st.dataframe(df_comm, use_container_width=True, height=300)
+                    
+                    # Gráfico
+                    fig = px.bar(df_comm, x='Comunidade', y='Tamanho', 
+                                 title='Distribuição de Comunidades',
+                                 color='Tamanho',
+                                 color_continuous_scale='viridis',
+                                 text='Percentual')
+                    fig.update_traces(textposition='outside')
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    st.divider()
+                    st.write("**Interpretação da Modularidade:**")
+                    if modularity > 0.4:
+                        st.success("🔹 **Modularidade alta** - Comunidades muito bem definidas, times informais claros")
+                    elif modularity > 0.3:
+                        st.info("🔹 **Modularidade boa** - Comunidades razoavelmente definidas")
+                    elif modularity > 0.1:
+                        st.warning("🔹 **Modularidade moderada** - Comunidades menos evidentes")
+                    else:
+                        st.error("🔹 **Modularidade baixa** - Estrutura de comunidades fraca")
+                    
+                    st.info("💡 **Significado:** Identifica grupos de colaboradores que trabalham mais frequentemente juntos (times informais dentro do projeto). A modularidade mede a qualidade dessa divisão.")
+                    
+                except Exception as e:
+                    st.error(f"Erro ao detectar comunidades: {e}")
+    
+    with col2:
+        if st.button(" Bridging Ties (Pontes entre Comunidades)", use_container_width=True):
+            with st.spinner("Analisando pontes entre comunidades..."):
+                try:
+                    # Reconstrói NetworkX
+                    G = nx.DiGraph()
+                    for i in range(num_vertices):
+                        G.add_node(idx_label(i, mapping))
+                    for u, v, w in edges:
+                        G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
+                    
+                    G_undirected = G.to_undirected()
+                    
+                    # Detecta comunidades primeiro
+                    communities_gen = nx.community.greedy_modularity_communities(G_undirected)
+                    node_to_community = {}
+                    for idx, comm in enumerate(communities_gen):
+                        for node in comm:
+                            node_to_community[node] = idx
+                    
+                    # Calcula betweenness centrality (identifica pontes)
+                    betweenness = nx.betweenness_centrality(G)
+                    
+                    # Identifica nós que conectam diferentes comunidades
+                    bridge_scores = {}
+                    for node in G.nodes():
+                        neighbors = list(G.neighbors(node))
+                        if not neighbors:
+                            continue
+                        
+                        # Conta quantas comunidades diferentes este nó conecta
+                        neighbor_communities = set()
+                        for neighbor in neighbors:
+                            if neighbor in node_to_community:
+                                neighbor_communities.add(node_to_community[neighbor])
+                        
+                        # Score de ponte: número de comunidades conectadas * betweenness
+                        num_connected_communities = len(neighbor_communities)
+                        if num_connected_communities > 1:
+                            bridge_scores[node] = {
+                                'betweenness': betweenness[node],
+                                'communities_connected': num_connected_communities,
+                                'bridge_score': betweenness[node] * num_connected_communities
+                            }
+                    
+                    # Top pontes
+                    top_bridges = sorted(bridge_scores.items(), 
+                                        key=lambda x: x[1]['bridge_score'], 
+                                        reverse=True)[:15]
+                    
+                    if top_bridges:
+                        st.success(f" **{len(bridge_scores)} colaboradores atuam como pontes**")
+                        
+                        df_bridges = pd.DataFrame([
+                            {
+                                'Colaborador': node,
+                                'Comunidades Conectadas': data['communities_connected'],
+                                'Betweenness': f"{data['betweenness']:.4f}",
+                                'Bridge Score': f"{data['bridge_score']:.4f}"
+                            }
+                            for node, data in top_bridges
+                        ])
+                        
+                        st.write("**Top 15 Colaboradores-Ponte:**")
+                        st.dataframe(df_bridges, use_container_width=True, height=400)
+                        
+                        # Gráfico
+                        fig = px.bar(df_bridges.head(10), 
+                                    x='Colaborador', 
+                                    y='Comunidades Conectadas',
+                                    title='Top 10 Pontes - Comunidades Conectadas',
+                                    color='Comunidades Conectadas',
+                                    color_continuous_scale='blues')
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        st.divider()
+                        st.write("**Interpretação:**")
+                        max_communities = max(d['communities_connected'] for _, d in top_bridges)
+                        if max_communities >= 4:
+                            st.success(" **Pontes fortes identificadas** - Alguns colaboradores conectam muitas comunidades diferentes")
+                        elif max_communities >= 3:
+                            st.info(" **Pontes moderadas** - Colaboradores conectam algumas comunidades")
+                        else:
+                            st.warning("**Pontes limitadas** - Poucas conexões entre comunidades diferentes")
+                        
+                        st.info(" **Significado:** Identifica colaboradores que conectam diferentes comunidades, atuando como elo entre grupos que, de outra forma, seriam isolados. Esses colaboradores são críticos para a integração do projeto.")
+                    else:
+                        st.warning("Nenhuma ponte significativa detectada")
+                    
+                except Exception as e:
+                    st.error(f"Erro ao analisar pontes: {e}")
 # ========================================
 # TAB 7: EXPORTAÇÃO
 # ========================================
