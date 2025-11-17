@@ -529,14 +529,62 @@ with tab2:
 # ========================================
 
 with tab3:
-    st.header("Métricas de Centralidade")
+    st.header("🎯 Métricas de Centralidade")
     
-    analysis_service = st.session_state.get('analysis_service')
-
-    # Centrality calculations disabled because GraphAnalysisService import was commented out.
+    edges = st.session_state.edges
+    mapping = st.session_state.mapping
+    num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, mapping)
+    
     if st.button("Calcular Todas as Centralidades"):
-        st.info("Centralidade desabilitada: `GraphAnalysisService` foi comentado no código.")
+        with st.spinner("Calculando centralidades com NetworkX..."):
+            try:
+                # Reconstrói grafo NetworkX a partir das arestas
+                G = nx.DiGraph()
+                
+                for i in range(num_vertices):
+                    label = idx_label(i, mapping)
+                    G.add_node(label)
+                
+                for u, v, w in edges:
+                    u_label = idx_label(u, mapping)
+                    v_label = idx_label(v, mapping)
+                    G.add_edge(u_label, v_label, weight=w)
+                
+                # Calcula todas as centralidades
+                centralities = {}
+                
+                # 1. Degree Centrality
+                centralities['Degree'] = nx.degree_centrality(G)
+                
+                # 2. Betweenness Centrality
+                centralities['Betweenness'] = nx.betweenness_centrality(G)
+                
+                # 3. Closeness Centrality
+                try:
+                    centralities['Closeness'] = nx.closeness_centrality(G)
+                except:
+                    st.warning("Closeness não pôde ser calculado (grafo desconexo)")
+                    centralities['Closeness'] = {node: 0.0 for node in G.nodes()}
+                
+                # 4. PageRank
+                centralities['PageRank'] = nx.pagerank(G)
+                
+                # 5. Eigenvector Centrality
+                try:
+                    centralities['Eigenvector'] = nx.eigenvector_centrality(G, max_iter=1000)
+                except:
+                    st.warning("Eigenvector não pôde ser calculado")
+                    centralities['Eigenvector'] = {node: 0.0 for node in G.nodes()}
+                
+                # Salva no session state
+                st.session_state.centralities = centralities
+                
+                st.success("✅ Centralidades calculadas com sucesso!")
+                
+            except Exception as e:
+                st.error(f"Erro ao calcular centralidades: {e}")
     
+    # Exibição das centralidades
     if 'centralities' in st.session_state:
         centralities = st.session_state.centralities
         
