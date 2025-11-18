@@ -1,1 +1,52 @@
+# Variáveis de ambiente
 Codigos/.env
+.env
+
+# Ambientes virtuais Python
+.venv/
+venv/
+env/
+ENV/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Arquivos temporários de grafos
+edge_list.txt
+export
+export_edges
+grafo_export.csv
+temp_edges.txt
+temp_graph.html
+test_edges.txt
+test_gephi.csv
+grafo_neo4j.csv
+grafo.html
+matriz-de-adjacencia-neo4j.csv
+*.csv
+*.html
+
+# Arquivos do Neo4j
+neo4j/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

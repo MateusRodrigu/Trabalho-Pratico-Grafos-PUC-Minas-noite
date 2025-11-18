@@ -407,121 +407,118 @@ with tab2:
     else:
         users = [str(i) for i in range(num_vertices)]
 
-    if st.session_state.implementation != "Lista de Adjacência":
-        st.info("**Algoritmos de busca e caminhos estão disponíveis apenas para Lista de Adjacência**")
-    else:
-        st.subheader("BFS - Busca em Largura")
-        col1, col2 = st.columns([2, 1])
+    st.subheader("BFS - Busca em Largura")
+    col1, col2 = st.columns([2, 1])
 
-        with col1:
-            start_user_bfs = st.selectbox("Usuário inicial (BFS)", users, key="bfs_start")
+    with col1:
+        start_user_bfs = st.selectbox("Usuário inicial (BFS)", users, key="bfs_start")
 
-        with col2:
-            if st.button("Executar BFS"):
-                params = {"start_user": start_user_bfs} if mapping else {"start_index": int(start_user_bfs)}
-                try:
-                    r = api_get("/graph/bfs", params=params)
-                    r.raise_for_status()
-                    distances = r.json().get('distances', {})
-                    # distances keys are strings
-                    df_distances = pd.DataFrame([
-                        {"Usuário": idx_label(int(k), mapping), "Distância": v}
-                        for k, v in sorted({int(k): v for k, v in distances.items()}.items(), key=lambda x: x[1])
-                    ])
-                    st.dataframe(df_distances, use_container_width=True)
-                    st.info(f"Alcançados: {len(distances)} vértices")
-                except Exception as e:
-                    st.error(f"Erro BFS: {e}")
+    with col2:
+        if st.button("Executar BFS"):
+            params = {"start_user": start_user_bfs} if mapping else {"start_index": int(start_user_bfs)}
+            try:
+                r = api_get("/graph/bfs", params=params)
+                r.raise_for_status()
+                distances = r.json().get('distances', {})
+                # distances keys are strings
+                df_distances = pd.DataFrame([
+                    {"Usuário": idx_label(int(k), mapping), "Distância": v}
+                    for k, v in sorted({int(k): v for k, v in distances.items()}.items(), key=lambda x: x[1])
+                ])
+                st.dataframe(df_distances, use_container_width=True)
+                st.info(f"Alcançados: {len(distances)} vértices")
+            except Exception as e:
+                st.error(f"Erro BFS: {e}")
 
-        st.divider()
+    st.divider()
 
-        st.subheader("DFS - Busca em Profundidade")
-        col1, col2, col3 = st.columns([2, 1, 1])
-        with col1:
-            start_user_dfs = st.selectbox("Usuário inicial (DFS)", users, key="dfs_start")
-        with col2:
-            dfs_type = st.radio("Tipo DFS", ["Iterativa", "Recursiva"], key="dfs_type")
-        with col3:
-            if st.button("Executar DFS"):
-                params = {"start_user": start_user_dfs, "mode": "iterative" if dfs_type == "Iterativa" else "recursive"} if mapping else {"start_index": int(start_user_dfs), "mode": "iterative" if dfs_type == "Iterativa" else "recursive"}
-                try:
-                    r = api_get("/graph/dfs", params=params)
-                    r.raise_for_status()
-                    visited = r.json().get('visited', [])
-                    visited_users = [idx_label(int(v), mapping) for v in visited]
-                    st.write("**Ordem de visita:**")
-                    st.write(" → ".join(visited_users[:20]) + ("..." if len(visited_users) > 20 else ""))
-                    st.info(f"Visitados: {len(visited)} vértices")
-                except Exception as e:
-                    st.error(f"Erro DFS: {e}")
+    st.subheader("DFS - Busca em Profundidade")
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        start_user_dfs = st.selectbox("Usuário inicial (DFS)", users, key="dfs_start")
+    with col2:
+        dfs_type = st.radio("Tipo DFS", ["Iterativa", "Recursiva"], key="dfs_type")
+    with col3:
+        if st.button("Executar DFS"):
+            params = {"start_user": start_user_dfs, "mode": "iterative" if dfs_type == "Iterativa" else "recursive"} if mapping else {"start_index": int(start_user_dfs), "mode": "iterative" if dfs_type == "Iterativa" else "recursive"}
+            try:
+                r = api_get("/graph/dfs", params=params)
+                r.raise_for_status()
+                visited = r.json().get('visited', [])
+                visited_users = [idx_label(int(v), mapping) for v in visited]
+                st.write("**Ordem de visita:**")
+                st.write(" → ".join(visited_users[:20]) + ("..." if len(visited_users) > 20 else ""))
+                st.info(f"Visitados: {len(visited)} vértices")
+            except Exception as e:
+                st.error(f"Erro DFS: {e}")
 
-        st.divider()
+    st.divider()
 
-        st.subheader("Caminho Mais Curto")
-        col1, col2, col3 = st.columns([2, 2, 1])
-        with col1:
-            source_user = st.selectbox("Origem", users, key="path_source")
-        with col2:
-            target_user = st.selectbox("Destino", users, key="path_target")
-        with col3:
-            if st.button("Encontrar Caminho"):
-                params = {"source_user": source_user, "target_user": target_user} if mapping else {"source_index": int(source_user), "target_index": int(target_user)}
-                try:
-                    r = api_get("/graph/shortest_path", params=params)
-                    r.raise_for_status()
-                    path = r.json().get('path')
-                    if path:
-                        path_users = [idx_label(v, mapping) for v in path]
-                        st.success(f"Caminho encontrado ({len(path)} saltos)")
-                        st.write(" → ".join(path_users))
-                    else:
-                        st.warning("Não há caminho entre esses usuários")
-                except Exception as e:
-                    st.error(f"Erro shortest_path: {e}")
+    st.subheader("Caminho Mais Curto")
+    col1, col2, col3 = st.columns([2, 2, 1])
+    with col1:
+        source_user = st.selectbox("Origem", users, key="path_source")
+    with col2:
+        target_user = st.selectbox("Destino", users, key="path_target")
+    with col3:
+        if st.button("Encontrar Caminho"):
+            params = {"source_user": source_user, "target_user": target_user} if mapping else {"source_index": int(source_user), "target_index": int(target_user)}
+            try:
+                r = api_get("/graph/shortest_path", params=params)
+                r.raise_for_status()
+                path = r.json().get('path')
+                if path:
+                    path_users = [idx_label(v, mapping) for v in path]
+                    st.success(f"Caminho encontrado ({len(path)} saltos)")
+                    st.write(" → ".join(path_users))
+                else:
+                    st.warning("Não há caminho entre esses usuários")
+            except Exception as e:
+                st.error(f"Erro shortest_path: {e}")
 
-        st.divider()
+    st.divider()
 
-        st.subheader("Dijkstra (Caminho Ponderado)")
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            start_dijkstra = st.selectbox("Usuário inicial (Dijkstra)", users, key="dijkstra")
-        with col2:
-            if st.button("Executar Dijkstra"):
-                params = {"start_user": start_dijkstra} if mapping else {"start_index": int(start_dijkstra)}
-                try:
-                    r = api_get("/graph/dijkstra", params=params)
-                    r.raise_for_status()
-                    data = r.json()
-                    distances = data.get('distances', {})
-                    df_dijkstra = pd.DataFrame([
-                        {"Usuário": idx_label(int(v), mapping), "Distância": d}
-                        for v, d in sorted({int(k): v for k, v in distances.items()}.items(), key=lambda x: x[1])
-                        if d != float('inf')
-                    ])
-                    st.dataframe(df_dijkstra.head(20), use_container_width=True)
-                except Exception as e:
-                    st.error(f"Erro Dijkstra: {e}")
+    st.subheader("Dijkstra (Caminho Ponderado)")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        start_dijkstra = st.selectbox("Usuário inicial (Dijkstra)", users, key="dijkstra")
+    with col2:
+        if st.button("Executar Dijkstra"):
+            params = {"start_user": start_dijkstra} if mapping else {"start_index": int(start_dijkstra)}
+            try:
+                r = api_get("/graph/dijkstra", params=params)
+                r.raise_for_status()
+                data = r.json()
+                distances = data.get('distances', {})
+                df_dijkstra = pd.DataFrame([
+                    {"Usuário": idx_label(int(v), mapping), "Distância": d}
+                    for v, d in sorted({int(k): v for k, v in distances.items()}.items(), key=lambda x: x[1])
+                    if d != float('inf')
+                ])
+                st.dataframe(df_dijkstra.head(20), use_container_width=True)
+            except Exception as e:
+                st.error(f"Erro Dijkstra: {e}")
 
-        st.divider()
+    st.divider()
 
-        st.subheader("K-Hop Neighbors")
-        col1, col2, col3 = st.columns([2, 1, 1])
-        with col1:
-            khop_user = st.selectbox("Usuário central", users, key="khop")
-        with col2:
-            k = st.number_input("K (número de saltos)", min_value=1, max_value=5, value=2)
-        with col3:
-            if st.button("Buscar Vizinhos"):
-                params = {"vertex_user": khop_user, "k": k} if mapping else {"vertex_index": int(khop_user), "k": k}
-                try:
-                    r = api_get("/graph/khop", params=params)
-                    r.raise_for_status()
-                    neighbors = r.json().get('neighbors', [])
-                    neighbor_users = [idx_label(int(v), mapping) for v in neighbors]
-                    st.success(f"{len(neighbors)} vizinhos encontrados a {k} saltos")
-                    st.write(", ".join(sorted(neighbor_users)[:30]))
-                except Exception as e:
-                    st.error(f"Erro k-hop: {e}")
+    st.subheader("K-Hop Neighbors")
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        khop_user = st.selectbox("Usuário central", users, key="khop")
+    with col2:
+        k = st.number_input("K (número de saltos)", min_value=1, max_value=5, value=2)
+    with col3:
+        if st.button("Buscar Vizinhos"):
+            params = {"vertex_user": khop_user, "k": k} if mapping else {"vertex_index": int(khop_user), "k": k}
+            try:
+                r = api_get("/graph/khop", params=params)
+                r.raise_for_status()
+                neighbors = r.json().get('neighbors', [])
+                neighbor_users = [idx_label(int(v), mapping) for v in neighbors]
+                st.success(f"{len(neighbors)} vizinhos encontrados a {k} saltos")
+                st.write(", ".join(sorted(neighbor_users)[:30]))
+            except Exception as e:
+                st.error(f"Erro k-hop: {e}")
 
 
 # ========================================
@@ -680,46 +677,43 @@ with tab4:
 with tab5:
     st.header("Detecção de Ciclos e Ordenação Topológica")
 
-    if st.session_state.implementation == "Lista de Adjacência":
-        col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
 
-        with col1:
-            st.subheader("Detecção de Ciclos")
+    with col1:
+        st.subheader("Detecção de Ciclos")
 
-            if st.button("Verificar Ciclo"):
-                try:
-                    r = api_get("/graph/has_cycle")
-                    r.raise_for_status()
-                    has_cycle = r.json().get('has_cycle')
-                    if has_cycle:
-                        st.error("O grafo contém ciclos")
-                    else:
-                        st.success("O grafo é acíclico (DAG)")
-                except Exception as e:
-                    st.error(f"Erro ao verificar ciclo: {e}")
+        if st.button("Verificar Ciclo"):
+            try:
+                r = api_get("/graph/has_cycle")
+                r.raise_for_status()
+                has_cycle = r.json().get('has_cycle')
+                if has_cycle:
+                    st.error("O grafo contém ciclos")
+                else:
+                    st.success("O grafo é acíclico (DAG)")
+            except Exception as e:
+                st.error(f"Erro ao verificar ciclo: {e}")
 
-        with col2:
-            st.subheader("Ordenação Topológica")
+    with col2:
+        st.subheader("Ordenação Topológica")
 
-            if st.button("Calcular Ordem"):
-                try:
-                    r = api_get("/graph/topo_sort")
-                    r.raise_for_status()
-                    topo_sort = r.json().get('topological_sort')
-                    if topo_sort:
-                        topo_users = [idx_label(v, st.session_state.mapping) for v in topo_sort[:50]]
-                        st.success("Ordenação topológica encontrada")
-                        df_topo = pd.DataFrame({
-                            'Posição': range(1, len(topo_users) + 1),
-                            'Usuário': topo_users
-                        })
-                        st.dataframe(df_topo, use_container_width=True)
-                    else:
-                        st.error("Grafo contém ciclos - ordenação topológica impossível")
-                except Exception as e:
-                    st.error(f"Erro topo_sort: {e}")
-    else:
-        st.info("Análise de ciclos disponível apenas para Lista de Adjacência")
+        if st.button("Calcular Ordem"):
+            try:
+                r = api_get("/graph/topo_sort")
+                r.raise_for_status()
+                topo_sort = r.json().get('topological_sort')
+                if topo_sort:
+                    topo_users = [idx_label(v, st.session_state.mapping) for v in topo_sort[:50]]
+                    st.success("Ordenação topológica encontrada")
+                    df_topo = pd.DataFrame({
+                        'Posição': range(1, len(topo_users) + 1),
+                        'Usuário': topo_users
+                    })
+                    st.dataframe(df_topo, use_container_width=True)
+                else:
+                    st.error("Grafo contém ciclos - ordenação topológica impossível")
+            except Exception as e:
+                st.error(f"Erro topo_sort: {e}")
 
 
 # ========================================
@@ -1242,11 +1236,16 @@ with st.expander("Consultas Customizadas (Avançado)"):
         if st.button("Verificar"):
             u = user_to_index[u_user]
             v = user_to_index[v_user]
-            result = v in adjacency.get(u, [])
-            if result:
-                st.success(f"{v_user} é sucessor de {u_user}")
-            else:
-                st.info(f"{v_user} NÃO é sucessor de {u_user}")
+            try:
+                r = api_get("/graph/is_sucessor", params={"u": u, "v": v})
+                r.raise_for_status()
+                result = r.json().get('is_sucessor')
+                if result:
+                    st.success(f"{v_user} é sucessor de {u_user}")
+                else:
+                    st.info(f"{v_user} NÃO é sucessor de {u_user}")
+            except Exception as e:
+                st.error(f"Erro: {e}")
 
     elif operation == "Verificar se dois vértices são predecessores":
         col1, col2 = st.columns(2)
@@ -1258,11 +1257,16 @@ with st.expander("Consultas Customizadas (Avançado)"):
         if st.button("Verificar"):
             u = user_to_index[u_user]
             v = user_to_index[v_user]
-            result = u in adjacency.get(v, [])
-            if result:
-                st.success(f"{u_user} é predecessor de {v_user}")
-            else:
-                st.info(f"{u_user} NÃO é predecessor de {v_user}")
+            try:
+                r = api_get("/graph/is_predecessor", params={"u": u, "v": v})
+                r.raise_for_status()
+                result = r.json().get('is_predecessor')
+                if result:
+                    st.success(f"{u_user} é predecessor de {v_user}")
+                else:
+                    st.info(f"{u_user} NÃO é predecessor de {v_user}")
+            except Exception as e:
+                st.error(f"Erro: {e}")
 
     elif operation == "Verificar se duas arestas são divergentes":
         st.write("**Aresta 1:**")
@@ -1284,11 +1288,16 @@ with st.expander("Consultas Customizadas (Avançado)"):
             v1 = user_to_index[v1_user]
             u2 = user_to_index[u2_user]
             v2 = user_to_index[v2_user]
-            result = (u1 == u2 and v1 != v2)
-            if result:
-                st.success(f"As arestas ({u1_user}→{v1_user}) e ({u2_user}→{v2_user}) são DIVERGENTES")
-            else:
-                st.info(f"As arestas NÃO são divergentes")
+            try:
+                r = api_get("/graph/is_divergent", params={"u1": u1, "v1": v1, "u2": u2, "v2": v2})
+                r.raise_for_status()
+                result = r.json().get('is_divergent')
+                if result:
+                    st.success(f"As arestas ({u1_user}→{v1_user}) e ({u2_user}→{v2_user}) são DIVERGENTES")
+                else:
+                    st.info(f"As arestas NÃO são divergentes")
+            except Exception as e:
+                st.error(f"Erro: {e}")
 
     elif operation == "Verificar se duas arestas são convergentes":
         st.write("**Aresta 1:**")
@@ -1310,11 +1319,16 @@ with st.expander("Consultas Customizadas (Avançado)"):
             v1 = user_to_index[v1_user]
             u2 = user_to_index[u2_user]
             v2 = user_to_index[v2_user]
-            result = (v1 == v2 and u1 != u2)
-            if result:
-                st.success(f"As arestas ({u1_user}→{v1_user}) e ({u2_user}→{v2_user}) são CONVERGENTES")
-            else:
-                st.info(f"As arestas NÃO são convergentes")
+            try:
+                r = api_get("/graph/is_convergent", params={"u1": u1, "v1": v1, "u2": u2, "v2": v2})
+                r.raise_for_status()
+                result = r.json().get('is_convergent')
+                if result:
+                    st.success(f"As arestas ({u1_user}→{v1_user}) e ({u2_user}→{v2_user}) são CONVERGENTES")
+                else:
+                    st.info(f"As arestas NÃO são convergentes")
+            except Exception as e:
+                st.error(f"Erro: {e}")
 
     elif operation == "Verificar se vértice é incidente a aresta":
         st.write("**Aresta:**")
@@ -1330,11 +1344,16 @@ with st.expander("Consultas Customizadas (Avançado)"):
             u = user_to_index[u_user]
             v = user_to_index[v_user]
             x = user_to_index[x_user]
-            result = (x == u or x == v)
-            if result:
-                st.success(f"{x_user} é INCIDENTE à aresta ({u_user}→{v_user})")
-            else:
-                st.info(f"{x_user} NÃO é incidente à aresta")
+            try:
+                r = api_get("/graph/is_incident", params={"u": u, "v": v, "x": x})
+                r.raise_for_status()
+                result = r.json().get('is_incident')
+                if result:
+                    st.success(f"{x_user} é INCIDENTE à aresta ({u_user}→{v_user})")
+                else:
+                    st.info(f"{x_user} NÃO é incidente à aresta")
+            except Exception as e:
+                st.error(f"Erro: {e}")
 
     elif operation == "Obter peso de aresta específica":
         col1, col2 = st.columns(2)
@@ -1357,9 +1376,13 @@ with st.expander("Consultas Customizadas (Avançado)"):
 
         if st.button("Obter Peso"):
             v = user_to_index[v_user]
-            # no prototype vertex weights are not stored in export; assume 0.0
-            weight = 0.0
-            st.info(f"Peso do vértice {v_user}: **{weight}**")
+            try:
+                r = api_get("/graph/vertex_weight", params={"v": v})
+                r.raise_for_status()
+                weight = r.json().get('weight', 0.0)
+                st.info(f"Peso do vértice {v_user}: **{weight}**")
+            except Exception as e:
+                st.error(f"Erro: {e}")
 
 
 # ========================================
@@ -1385,61 +1408,73 @@ with st.expander("Análise Detalhada de Usuário"):
     if st.button("Gerar Perfil"):
         user_idx = user_to_index[selected_user]
 
-        # Métricas básicas
-        in_deg = len(in_adj.get(user_idx, []))
-        out_deg = len(adjacency.get(user_idx, []))
-        total_deg = in_deg + out_deg
+        # Métricas básicas via API
+        try:
+            r_in = api_get("/graph/vertex_in_degree", params={"v": user_idx})
+            r_in.raise_for_status()
+            in_deg = r_in.json().get('in_degree', 0)
+            
+            r_out = api_get("/graph/vertex_out_degree", params={"v": user_idx})
+            r_out.raise_for_status()
+            out_deg = r_out.json().get('out_degree', 0)
+            
+            r_weight = api_get("/graph/vertex_weight", params={"v": user_idx})
+            r_weight.raise_for_status()
+            vertex_weight = r_weight.json().get('weight', 0.0)
+            
+            total_deg = in_deg + out_deg
 
-        col1, col2, col3, col4 = st.columns(4)
+            col1, col2, col3, col4 = st.columns(4)
 
-        with col1:
-            st.metric("In-Degree", in_deg)
-        with col2:
-            st.metric("Out-Degree", out_deg)
-        with col3:
-            st.metric("Total Degree", total_deg)
-        with col4:
-            vertex_weight = 0.0
-            st.metric("Peso Vértice", f"{vertex_weight:.2f}")
-
-        st.divider()
-
-        # Vizinhos
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader("Conexões de Saída")
-            out_neighbors = [(v, weight_map.get((user_idx, v), 0.0)) for v in adjacency.get(user_idx, [])]
-            if out_neighbors:
-                df_out = pd.DataFrame([
-                    {"Usuário": idx_label(v, mapping), "Peso": w}
-                    for v, w in sorted(out_neighbors, key=lambda x: x[1], reverse=True)[:10]
-                ])
-                st.dataframe(df_out, use_container_width=True)
-            else:
-                st.info("Sem conexões de saída")
-
-        with col2:
-            st.subheader("Conexões de Entrada")
-            in_neighbors = [(u, weight_map.get((u, user_idx), 0.0)) for u in in_adj.get(user_idx, [])]
-            if in_neighbors:
-                df_in = pd.DataFrame([
-                    {"Usuário": idx_label(u, mapping), "Peso": w}
-                    for u, w in sorted(in_neighbors, key=lambda x: x[1], reverse=True)[:10]
-                ])
-                st.dataframe(df_in, use_container_width=True)
-            else:
-                st.info("Sem conexões de entrada")
-
-        # Centralidades (se calculadas)
-        if 'centralities' in st.session_state:
+            with col1:
+                st.metric("In-Degree", in_deg)
+            with col2:
+                st.metric("Out-Degree", out_deg)
+            with col3:
+                st.metric("Total Degree", total_deg)
+            with col4:
+                st.metric("Peso Vértice", f"{vertex_weight:.2f}")
+        except Exception as e:
+            st.error(f"Erro ao obter métricas: {e}")
+        else:
             st.divider()
-            st.subheader("Métricas de Centralidade")
-            centralities = st.session_state.centralities
-            centrality_data = {'Métrica': list(centralities.keys()), 'Valor': [centralities[metric].get(selected_user, 0) for metric in centralities.keys()]}
-            df_cent = pd.DataFrame(centrality_data)
-            fig = px.bar(df_cent, x='Métrica', y='Valor', title=f'Centralidades de {selected_user}', color='Valor', color_continuous_scale='viridis')
-            st.plotly_chart(fig, use_container_width=True)
+
+            # Vizinhos
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.subheader("Conexões de Saída")
+                out_neighbors = [(v, weight_map.get((user_idx, v), 0.0)) for v in adjacency.get(user_idx, [])]
+                if out_neighbors:
+                    df_out = pd.DataFrame([
+                        {"Usuário": idx_label(v, mapping), "Peso": w}
+                        for v, w in sorted(out_neighbors, key=lambda x: x[1], reverse=True)[:10]
+                    ])
+                    st.dataframe(df_out, use_container_width=True)
+                else:
+                    st.info("Sem conexões de saída")
+
+            with col2:
+                st.subheader("Conexões de Entrada")
+                in_neighbors = [(u, weight_map.get((u, user_idx), 0.0)) for u in in_adj.get(user_idx, [])]
+                if in_neighbors:
+                    df_in = pd.DataFrame([
+                        {"Usuário": idx_label(u, mapping), "Peso": w}
+                        for u, w in sorted(in_neighbors, key=lambda x: x[1], reverse=True)[:10]
+                    ])
+                    st.dataframe(df_in, use_container_width=True)
+                else:
+                    st.info("Sem conexões de entrada")
+
+            # Centralidades (se calculadas)
+            if 'centralities' in st.session_state:
+                st.divider()
+                st.subheader("Métricas de Centralidade")
+                centralities = st.session_state.centralities
+                centrality_data = {'Métrica': list(centralities.keys()), 'Valor': [centralities[metric].get(selected_user, 0) for metric in centralities.keys()]}
+                df_cent = pd.DataFrame(centrality_data)
+                fig = px.bar(df_cent, x='Métrica', y='Valor', title=f'Centralidades de {selected_user}', color='Valor', color_continuous_scale='viridis')
+                st.plotly_chart(fig, use_container_width=True)
 
 
 # ========================================
@@ -1471,44 +1506,62 @@ with st.expander("Comparar Usuários"):
         idx1 = user_to_index[user1]
         idx2 = user_to_index[user2]
 
-        metrics_data = {
-            'Métrica': ['In-Degree', 'Out-Degree', 'Total Degree', 'Peso Vértice'],
-            user1: [
-                len(in_adj.get(idx1, [])),
-                len(adjacency.get(idx1, [])),
-                len(in_adj.get(idx1, [])) + len(adjacency.get(idx1, [])),
-                0.0
-            ],
-            user2: [
-                len(in_adj.get(idx2, [])),
-                len(adjacency.get(idx2, [])),
-                len(in_adj.get(idx2, [])) + len(adjacency.get(idx2, [])),
-                0.0
-            ]
-        }
+        try:
+            # Obter métricas via API
+            r1_in = api_get("/graph/vertex_in_degree", params={"v": idx1})
+            r1_in.raise_for_status()
+            in1 = r1_in.json().get('in_degree', 0)
+            
+            r1_out = api_get("/graph/vertex_out_degree", params={"v": idx1})
+            r1_out.raise_for_status()
+            out1 = r1_out.json().get('out_degree', 0)
+            
+            r1_weight = api_get("/graph/vertex_weight", params={"v": idx1})
+            r1_weight.raise_for_status()
+            weight1 = r1_weight.json().get('weight', 0.0)
+            
+            r2_in = api_get("/graph/vertex_in_degree", params={"v": idx2})
+            r2_in.raise_for_status()
+            in2 = r2_in.json().get('in_degree', 0)
+            
+            r2_out = api_get("/graph/vertex_out_degree", params={"v": idx2})
+            r2_out.raise_for_status()
+            out2 = r2_out.json().get('out_degree', 0)
+            
+            r2_weight = api_get("/graph/vertex_weight", params={"v": idx2})
+            r2_weight.raise_for_status()
+            weight2 = r2_weight.json().get('weight', 0.0)
 
-        df_compare = pd.DataFrame(metrics_data)
-        st.dataframe(df_compare, use_container_width=True)
-
-        # Gráfico comparativo
-        fig = go.Figure()
-        fig.add_trace(go.Bar(name=user1, x=metrics_data['Métrica'], y=metrics_data[user1], marker_color='lightblue'))
-        fig.add_trace(go.Bar(name=user2, x=metrics_data['Métrica'], y=metrics_data[user2], marker_color='lightcoral'))
-        fig.update_layout(title='Comparação de Métricas', barmode='group', xaxis_title='Métrica', yaxis_title='Valor')
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Verifica conexão direta
-        st.divider()
-        st.subheader("Conexão Direta")
-        if (idx1, idx2) in weight_map:
-            st.success(f"{user1} → {user2} (peso: {weight_map[(idx1, idx2)]})")
+            metrics_data = {
+                'Métrica': ['In-Degree', 'Out-Degree', 'Total Degree', 'Peso Vértice'],
+                user1: [in1, out1, in1 + out1, weight1],
+                user2: [in2, out2, in2 + out2, weight2]
+            }
+        except Exception as e:
+            st.error(f"Erro ao obter métricas: {e}")
         else:
-            st.info(f"Sem aresta de {user1} para {user2}")
+            df_compare = pd.DataFrame(metrics_data)
+            st.dataframe(df_compare, use_container_width=True)
 
-        if (idx2, idx1) in weight_map:
-            st.success(f"{user2} → {user1} (peso: {weight_map[(idx2, idx1)]})")
-        else:
-            st.info(f"Sem aresta de {user2} para {user1}")
+            # Gráfico comparativo
+            fig = go.Figure()
+            fig.add_trace(go.Bar(name=user1, x=metrics_data['Métrica'], y=metrics_data[user1], marker_color='lightblue'))
+            fig.add_trace(go.Bar(name=user2, x=metrics_data['Métrica'], y=metrics_data[user2], marker_color='lightcoral'))
+            fig.update_layout(title='Comparação de Métricas', barmode='group', xaxis_title='Métrica', yaxis_title='Valor')
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Verifica conexão direta
+            st.divider()
+            st.subheader("Conexão Direta")
+            if (idx1, idx2) in weight_map:
+                st.success(f"{user1} → {user2} (peso: {weight_map[(idx1, idx2)]})")
+            else:
+                st.info(f"Sem aresta de {user1} para {user2}")
+
+            if (idx2, idx1) in weight_map:
+                st.success(f"{user2} → {user1} (peso: {weight_map[(idx2, idx1)]})")
+            else:
+                st.info(f"Sem aresta de {user2} para {user1}")
 
 
 # ========================================
