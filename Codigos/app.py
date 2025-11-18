@@ -47,11 +47,13 @@ st.markdown("""
         margin: 0.5rem 0;
     }
     .stTabs [data-baseweb="tab-list"] {
-        gap: 2rem;
+        gap: 0.5rem;
+        flex-wrap: wrap;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        padding: 0 2rem;
+        height: 40px;
+        padding: 0 1rem;
+        white-space: nowrap;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -279,13 +281,14 @@ if not st.session_state.graph_loaded:
 # TABS PRINCIPAIS
 # ========================================
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "Visão Geral",
     "Busca e Caminhos", 
     "Centralidade",
     "Componentes",
     "Ciclos e Ordem",
     "Métricas Avançadas",
+    "Edição do Grafo",
     "Exportação"
 ])
 
@@ -526,7 +529,7 @@ with tab2:
 # ========================================
 
 with tab3:
-    st.header(" Métricas de Centralidade")
+    st.header("Métricas de Centralidade")
     
     edges = st.session_state.edges
     mapping = st.session_state.mapping
@@ -558,7 +561,7 @@ with tab3:
                 
                 # 3. Closeness Centrality
                 try:
-                    centralities['Closeness'] = nfx.closeness_centrality(G)
+                    centralities['Closeness'] = nx.closeness_centrality(G)
                 except:
                     st.warning("Closeness não pôde ser calculado (grafo desconexo)")
                     centralities['Closeness'] = {node: 0.0 for node in G.nodes()}
@@ -730,7 +733,7 @@ with tab6:
 # ========================================
 
 with tab6:
-    st.header(" Métricas Avançadas")
+    st.header("Métricas Avançadas")
 
     edges = st.session_state.edges
     mapping = st.session_state.mapping
@@ -740,12 +743,12 @@ with tab6:
     # MÉTRICAS DE ESTRUTURA E COESÃO
     # ========================================
     
-    st.subheader(" Métricas de Estrutura e Coesão")
+    st.subheader("Métricas de Estrutura e Coesão")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button(" Densidade da Rede", use_container_width=True):
+        if st.button("Densidade da Rede", use_container_width=True):
             with st.spinner("Calculando densidade..."):
                 try:
                     # Reconstrói NetworkX
@@ -785,7 +788,7 @@ with tab6:
                     st.error(f"Erro: {e}")
     
     with col2:
-        if st.button(" Coeficiente de Aglomeração", use_container_width=True):
+        if st.button("Coeficiente de Aglomeração", use_container_width=True):
             with st.spinner("Calculando coeficiente de aglomeração..."):
                 try:
                     # Reconstrói NetworkX
@@ -829,7 +832,7 @@ with tab6:
                     st.error(f"Erro: {e}")
     
     with col3:
-        if st.button(" Assortatividade", use_container_width=True):
+        if st.button("Assortatividade", use_container_width=True):
             with st.spinner("Calculando assortatividade..."):
                 try:
                     # Reconstrói NetworkX
@@ -894,12 +897,12 @@ with tab6:
     # MÉTRICAS DE COMUNIDADE
     # ========================================
     
-    st.subheader(" Métricas de Comunidade")
+    st.subheader("Métricas de Comunidade")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button(" Detecção de Comunidades (Modularidade)", use_container_width=True):
+        if st.button("Detecção de Comunidades (Modularidade)", use_container_width=True):
             with st.spinner("Detectando comunidades e calculando modularidade..."):
                 try:
                     # Reconstrói NetworkX
@@ -970,7 +973,7 @@ with tab6:
                     st.error(f"Erro ao detectar comunidades: {e}")
     
     with col2:
-        if st.button(" Bridging Ties (Pontes entre Comunidades)", use_container_width=True):
+        if st.button("Bridging Ties (Pontes entre Comunidades)", use_container_width=True):
             with st.spinner("Analisando pontes entre comunidades..."):
                 try:
                     # Reconstrói NetworkX
@@ -1061,27 +1064,308 @@ with tab6:
                 except Exception as e:
                     st.error(f"Erro ao analisar pontes: {e}")
 # ========================================
-# TAB 7: EXPORTAÇÃO
+# TAB 7: EDIÇÃO DO GRAFO
 # ========================================
 
 with tab7:
+    st.header("Edição do Grafo")
+    
+    st.info("**Importante**: Certifique-se de que o grafo está carregado antes de realizar operações de edição.")
+    
+    edges = st.session_state.edges
+    mapping = st.session_state.mapping
+    num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, mapping)
+    
+    # Prepare vertex list for selects (same as in other tabs)
+    if mapping:
+        vertices = sorted(mapping.values())
+    else:
+        vertices = [str(i) for i in range(num_vertices)]
+    
+    # ========================================
+    # 1. ADICIONAR ARESTA
+    # ========================================
+    st.subheader("Adicionar Aresta")
+    
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+    
+    with col1:
+        add_u_label = st.selectbox("Vértice Origem (u)", vertices, key="add_u")
+    
+    with col2:
+        add_v_label = st.selectbox("Vértice Destino (v)", vertices, key="add_v", index=1 if len(vertices) > 1 else 0)
+    
+    with col3:
+        add_weight = st.number_input("Peso (opcional)", min_value=0.0, value=1.0, step=0.1, key="add_weight")
+    
+    with col4:
+        st.write("")  # spacing
+        st.write("")  # spacing
+        if st.button("Adicionar", use_container_width=True):
+            try:
+                # Convert label back to index
+                if mapping:
+                    add_u = [k for k, v in mapping.items() if v == add_u_label][0]
+                    add_v = [k for k, v in mapping.items() if v == add_v_label][0]
+                else:
+                    add_u = int(add_u_label)
+                    add_v = int(add_v_label)
+                
+                # Check if edge already exists
+                r_check = api_get("/graph/edge", params={"u": int(add_u), "v": int(add_v)})
+                edge_exists = r_check.json().get("exists", False)
+                
+                if edge_exists:
+                    # Get current weight and add to it
+                    r_weight = api_get("/graph/edge_weight", params={"u": int(add_u), "v": int(add_v)})
+                    current_weight = r_weight.json().get("weight", 0.0)
+                    new_weight = current_weight + float(add_weight)
+                    
+                    # Update edge weight - use urljoin and requests.post directly for query params
+                    import requests
+                    from urllib.parse import urljoin
+                    params = {"u": int(add_u), "v": int(add_v), "weight": new_weight}
+                    r = requests.post(urljoin(API_BASE, "/graph/edge_weight"), params=params)
+                    r.raise_for_status()
+                    
+                    st.success(f"Aresta ({add_u_label} → {add_v_label}) já existia (peso {current_weight:.1f}). Peso somado: {add_weight:.1f}. Novo peso total: {new_weight:.1f}")
+                else:
+                    # Add new edge
+                    payload = {"u": int(add_u), "v": int(add_v), "weight": float(add_weight)}
+                    r = api_post("/graph/edge", json=payload)
+                    r.raise_for_status()
+                    
+                    st.success(f"Aresta ({add_u_label} → {add_v_label}) adicionada com peso {add_weight}")
+                
+                # Atualizar session state (recarregar edges)
+                edges_txt = api_download_text("/graph/export_edges", params={"filename": "temp_edges.txt"})
+                edges = []
+                for line in edges_txt.splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    parts = line.split()
+                    if len(parts) >= 3:
+                        u, v, w = int(parts[0]), int(parts[1]), float(parts[2])
+                        edges.append((u, v, w))
+                st.session_state.edges = edges
+                
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao adicionar aresta: {e}")
+    
+    st.divider()
+    
+    # ========================================
+    # 2. REMOVER ARESTA
+    # ========================================
+    st.subheader("Remover Aresta")
+    
+    col1, col2, col3 = st.columns([2, 2, 1])
+    
+    with col1:
+        remove_u_label = st.selectbox("Vértice Origem (u)", vertices, key="remove_u")
+    
+    with col2:
+        remove_v_label = st.selectbox("Vértice Destino (v)", vertices, key="remove_v", index=1 if len(vertices) > 1 else 0)
+    
+    with col3:
+        st.write("")  # spacing
+        st.write("")  # spacing
+        if st.button("Remover", use_container_width=True):
+            try:
+                # Convert label back to index
+                if mapping:
+                    remove_u = [k for k, v in mapping.items() if v == remove_u_label][0]
+                    remove_v = [k for k, v in mapping.items() if v == remove_v_label][0]
+                else:
+                    remove_u = int(remove_u_label)
+                    remove_v = int(remove_v_label)
+                
+                # Call API to remove edge
+                params = {"u": int(remove_u), "v": int(remove_v)}
+                r = api_get("/graph/edge", params={"u": int(remove_u), "v": int(remove_v)})
+                if not r.json().get("exists"):
+                    st.warning(f"Aresta ({remove_u_label} → {remove_v_label}) não existe")
+                else:
+                    r = requests.delete(urljoin(API_BASE, "/graph/edge"), params=params)
+                    r.raise_for_status()
+                    
+                    st.success(f"Aresta ({remove_u_label} → {remove_v_label}) removida")
+                    
+                    # Atualizar session state
+                    edges_txt = api_download_text("/graph/export_edges", params={"filename": "temp_edges.txt"})
+                    edges = []
+                    for line in edges_txt.splitlines():
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            u, v, w = int(parts[0]), int(parts[1]), float(parts[2])
+                            edges.append((u, v, w))
+                    st.session_state.edges = edges
+                    
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao remover aresta: {e}")
+    
+    st.divider()
+    
+    # ========================================
+    # 3. ALTERAR PESO DE ARESTA
+    # ========================================
+    st.subheader("Alterar Peso de Aresta")
+    
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+    
+    with col1:
+        weight_u_label = st.selectbox("Vértice Origem (u)", vertices, key="weight_u")
+    
+    with col2:
+        weight_v_label = st.selectbox("Vértice Destino (v)", vertices, key="weight_v", index=1 if len(vertices) > 1 else 0)
+    
+    with col3:
+        new_edge_weight = st.number_input("Novo Peso", min_value=0.0, value=1.0, step=0.1, key="new_edge_weight")
+    
+    with col4:
+        st.write("")  # spacing
+        st.write("")  # spacing
+        if st.button("Alterar", use_container_width=True):
+            try:
+                # Convert label back to index
+                if mapping:
+                    weight_u = [k for k, v in mapping.items() if v == weight_u_label][0]
+                    weight_v = [k for k, v in mapping.items() if v == weight_v_label][0]
+                else:
+                    weight_u = int(weight_u_label)
+                    weight_v = int(weight_v_label)
+                
+                # Check if edge exists
+                r = api_get("/graph/edge", params={"u": int(weight_u), "v": int(weight_v)})
+                if not r.json().get("exists"):
+                    st.warning(f"Aresta ({weight_u_label} → {weight_v_label}) não existe. Adicione-a primeiro.")
+                else:
+                    # Call API to set edge weight
+                    params = {"u": int(weight_u), "v": int(weight_v), "weight": float(new_edge_weight)}
+                    r = api_post("/graph/edge_weight", params=params)
+                    r.raise_for_status()
+                    
+                    st.success(f"Peso da aresta ({weight_u_label} → {weight_v_label}) alterado para {new_edge_weight}")
+                    
+                    # Atualizar session state
+                    edges_txt = api_download_text("/graph/export_edges", params={"filename": "temp_edges.txt"})
+                    edges = []
+                    for line in edges_txt.splitlines():
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            u, v, w = int(parts[0]), int(parts[1]), float(parts[2])
+                            edges.append((u, v, w))
+                    st.session_state.edges = edges
+                    
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao alterar peso da aresta: {e}")
+    
+    st.divider()
+    
+    # ========================================
+    # 4. ALTERAR PESO DE VÉRTICE
+    # ========================================
+    st.subheader("Alterar Peso de Vértice")
+    
+    col1, col2, col3 = st.columns([2, 2, 1])
+    
+    with col1:
+        vertex_id_label = st.selectbox("Vértice (v)", vertices, key="vertex_id")
+    
+    with col2:
+        new_vertex_weight = st.number_input("Novo Peso do Vértice", min_value=0.0, value=0.0, step=0.1, key="new_vertex_weight")
+    
+    with col3:
+        st.write("")  # spacing
+        st.write("")  # spacing
+        if st.button("Definir Peso", use_container_width=True):
+            try:
+                # Convert label back to index
+                if mapping:
+                    vertex_id = [k for k, v in mapping.items() if v == vertex_id_label][0]
+                else:
+                    vertex_id = int(vertex_id_label)
+                
+                # Call API to set vertex weight
+                params = {"v": int(vertex_id), "weight": float(new_vertex_weight)}
+                r = api_post("/graph/vertex_weight", params=params)
+                r.raise_for_status()
+                
+                st.success(f"Peso do vértice {vertex_id_label} definido como {new_vertex_weight}")
+            except Exception as e:
+                st.error(f"Erro ao alterar peso do vértice: {e}")
+    
+    st.divider()
+    
+    # ========================================
+    # 5. CONSULTAR PESO DE VÉRTICE
+    # ========================================
+    st.subheader("Consultar Peso de Vértice")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        query_vertex_id_label = st.selectbox("Vértice (v)", vertices, key="query_vertex_id")
+    
+    with col2:
+        st.write("")  # spacing
+        st.write("")  # spacing
+        if st.button("Consultar", use_container_width=True):
+            try:
+                # Convert label back to index
+                if mapping:
+                    query_vertex_id = [k for k, v in mapping.items() if v == query_vertex_id_label][0]
+                else:
+                    query_vertex_id = int(query_vertex_id_label)
+                
+                # Call API to get vertex weight
+                params = {"v": int(query_vertex_id)}
+                r = api_get("/graph/vertex_weight", params=params)
+                r.raise_for_status()
+                
+                data = r.json()
+                weight = data.get("weight", 0.0)
+                
+                st.info(f"**Peso do vértice {query_vertex_id_label}**: {weight}")
+            except Exception as e:
+                st.error(f"Erro ao consultar peso do vértice: {e}")
+    
+
+
+# ========================================
+# TAB 8: EXPORTAÇÃO
+# ========================================
+
+with tab8:
     st.header("Exportação de Dados")
 
-    st.subheader("Exportar para Gephi")
+    st.subheader("Exportar para CSV (Gephi)")
+    st.info("**Formato CSV compatível com Gephi** - Exporta lista de arestas com pesos para visualização no Gephi")
 
-    gephi_filename = st.text_input("Nome do arquivo", "grafo_export.csv")
+    gephi_filename = st.text_input("Nome do arquivo CSV", "grafo_export.csv")
 
-    if st.button("Exportar para Gephi"):
+    if st.button("Exportar CSV", use_container_width=True):
         try:
             # Request server to export CSV and return file bytes
             content = api_download_bytes("/graph/export", params={"filename": gephi_filename})
-            st.success(f"Pedido de exportação enviado: {gephi_filename}")
+            st.success(f"Arquivo CSV gerado: {gephi_filename}")
 
             st.download_button(
-                "Download CSV",
-                content,
+                label="Baixar arquivo CSV",
+                data=content,
                 file_name=gephi_filename,
-                mime="text/csv"
+                mime="text/csv",
+                use_container_width=True
             )
         except Exception as e:
             st.error(f"Erro ao exportar: {e}")
@@ -1089,56 +1373,25 @@ with tab7:
     st.divider()
 
     st.subheader("Exportar Lista de Arestas")
+    st.info("**Formato texto simples** - Lista de arestas com origem, destino e peso")
 
     edge_filename = st.text_input("Nome do arquivo de arestas", "edge_list.txt")
 
-    if st.session_state.implementation == "Lista de Adjacência":
-        if st.button("Exportar Lista"):
-            try:
-                # Download plain text edge list from API
-                edges_txt = api_download_text("/graph/export_edges", params={"filename": edge_filename})
-                st.success(f"Lista de arestas gerada: {edge_filename}")
-
-                st.download_button(
-                    "Download Lista de Arestas",
-                    edges_txt,
-                    file_name=edge_filename,
-                    mime="text/plain"
-                )
-            except Exception as e:
-                st.error(f"Erro ao exportar lista: {e}")
-
-    st.divider()
-
-    st.subheader("Estatísticas em JSON")
-
-    if st.button("Gerar Estatísticas"):
-        import json
+    if st.button("Exportar Lista", use_container_width=True):
         try:
-            info = api_get("/graph/info").json()
-        except Exception:
-            info = {}
+            # Download plain text edge list from API
+            edges_txt = api_download_text("/graph/export_edges", params={"filename": edge_filename})
+            st.success(f"Lista de arestas gerada: {edge_filename}")
 
-        stats = {
-            'vertices': info.get('vertices', 0),
-            'edges': info.get('edges', 0),
-            'implementation': st.session_state.implementation,
-            'graph_type': st.session_state.graph_type,
-            'is_connected': info.get('is_connected'),
-            'is_empty': info.get('is_empty'),
-            'is_complete': info.get('is_complete')
-        }
-
-        json_str = json.dumps(stats, indent=2)
-
-        st.code(json_str, language='json')
-
-        st.download_button(
-            "Download JSON",
-            json_str,
-            file_name="graph_statistics.json",
-            mime="application/json"
-        )
+            st.download_button(
+                label="Baixar lista de arestas",
+                data=edges_txt,
+                file_name=edge_filename,
+                mime="text/plain",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"Erro ao exportar lista: {e}")
 
 
 # ========================================

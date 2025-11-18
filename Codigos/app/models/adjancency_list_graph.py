@@ -129,13 +129,19 @@ class AdjacencyListGraph(AbstractGraph):
 
     def exportToGEPHI(self, path: str):
         """
-        Exporta o grafo para CSV compatível com Gephi.
-        Colunas: Source, Target, Weight
+        Exporta o grafo para formato CSV (compatível com Gephi).
+        Formato: Source,Target,Weight
         """
-        with open(path, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['Source', 'Target', 'Weight'])
+        with open(path, 'w', encoding='utf-8') as f:
+            # Cabeçalho CSV
+            f.write('Source,Target,Weight\n')
+            
+            # Arestas
             for u, vizinhos in self.adj_list.items():
                 for v in vizinhos:
-                    writer.writerow([u, v, self.getEdgeWeight(u, v)])
+                    edge_weight = self.getEdgeWeight(u, v)
+                    # Se houver labels, usa labels; senão usa índices
+                    source_label = self.vertex_labels[u] if u < len(self.vertex_labels) else str(u)
+                    target_label = self.vertex_labels[v] if v < len(self.vertex_labels) else str(v)
+                    f.write(f'{source_label},{target_label},{edge_weight}\n')
                     

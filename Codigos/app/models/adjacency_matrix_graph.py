@@ -99,11 +99,21 @@ class AdjacencyMatrixGraph(AbstractGraph):
         return self.edge_count == expected_edges
 
     def exportToGEPHI(self, path: str):
-        with open(path, "w", newline="") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(["Source", "Target", "Weight"])
+        """
+        Exporta o grafo para formato CSV (compatível com Gephi).
+        Formato: Source,Target,Weight
+        """
+        with open(path, 'w', encoding='utf-8') as f:
+            # Cabeçalho CSV
+            f.write('Source,Target,Weight\n')
+            
+            # Arestas
             for i in range(self.num_vertices):
                 for j in range(self.num_vertices):
                     if self.matrix[i][j] != 0:
-                        writer.writerow([self.vertex_labels[i], self.vertex_labels[j], self.matrix[i][j]])
+                        edge_weight = self.getEdgeWeight(i, j)
+                        # Se houver labels, usa labels; senão usa índices
+                        source_label = self.vertex_labels[i] if i < len(self.vertex_labels) else str(i)
+                        target_label = self.vertex_labels[j] if j < len(self.vertex_labels) else str(j)
+                        f.write(f'{source_label},{target_label},{edge_weight}\n')
     

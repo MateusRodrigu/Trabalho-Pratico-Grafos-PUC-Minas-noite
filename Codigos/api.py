@@ -585,3 +585,71 @@ def get_vertex_weight(v: int = Query(...), implementation: Optional[str] = Query
         raise HTTPException(status_code=400, detail=str(ie))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/graph/edge_weight")
+def set_edge_weight(u: int = Query(...), v: int = Query(...), weight: float = Query(...), implementation: Optional[str] = Query(None)):
+    """Define o peso de uma aresta."""
+    if graph_obj is None:
+        raise HTTPException(status_code=404, detail="No graph loaded")
+    try:
+        g = _ensure_graph(prefer=implementation)
+        with state_lock:
+            g.setEdgeWeight(u, v, weight)
+        return {"status": "ok", "u": u, "v": v, "weight": weight}
+    except IndexError as ie:
+        raise HTTPException(status_code=400, detail=str(ie))
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/graph/edge_weight")
+def get_edge_weight(u: int = Query(...), v: int = Query(...), implementation: Optional[str] = Query(None)):
+    """Retorna o peso de uma aresta."""
+    if graph_obj is None:
+        raise HTTPException(status_code=404, detail="No graph loaded")
+    try:
+        g = _ensure_graph(prefer=implementation)
+        weight = g.getEdgeWeight(u, v)
+        return {"u": u, "v": v, "weight": weight}
+    except IndexError as ie:
+        raise HTTPException(status_code=400, detail=str(ie))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/graph/has_edge")
+def has_edge_endpoint(u: int = Query(...), v: int = Query(...), implementation: Optional[str] = Query(None)):
+    """Verifica se existe uma aresta entre u e v."""
+    if graph_obj is None:
+        raise HTTPException(status_code=404, detail="No graph loaded")
+    try:
+        g = _ensure_graph(prefer=implementation)
+        exists = g.hasEdge(u, v)
+        return {"u": u, "v": v, "has_edge": exists}
+    except IndexError as ie:
+        raise HTTPException(status_code=400, detail=str(ie))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/graph/export_gephi")
+def export_to_gephi(filename: Optional[str] = Query("graph_export.gexf"), implementation: Optional[str] = Query(None)):
+    """Exporta o grafo para formato GEXF (Gephi)."""
+    if graph_obj is None:
+        raise HTTPException(status_code=404, detail="No graph loaded")
+    # ensure safe filename
+    safe_name = os.path.basename(filename)
+    if not safe_name.endswith('.gexf'):
+        safe_name += '.gexf'
+    try:
+        # if caller requested a representation, ensure it (may convert and persist)
+        if implementation:
+            _ensure_graph(prefer=implementation)
+        with state_lock:
+            graph_obj.exportToGEPHI(safe_name)
+        return FileResponse(path=safe_name, filename=safe_name, media_type='application/xml')
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
