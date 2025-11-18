@@ -148,9 +148,6 @@ class GraphController:
 
     def export_to_gephi(self, filepath: str) -> bool:
         """
-        Exporta grafo atual para formato Gephi.
-        :param filepath: Caminho do arquivo de saída
-        :return: True se exportado com sucesso
         """
         self._ensure_graph_loaded()
         
@@ -162,11 +159,6 @@ class GraphController:
             return False
 
     def export_analysis_to_csv(self, output_dir: str) -> Dict[str, str]:
-        """
-        Exporta todas as análises para arquivos CSV.
-        :param output_dir: Diretório de saída
-        :return: Dicionário com caminhos dos arquivos gerados
-        """
         import os
         import csv
         
