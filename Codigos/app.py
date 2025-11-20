@@ -478,30 +478,6 @@ with tab2:
                     st.warning("Não há caminho entre esses usuários")
             except Exception as e:
                 st.error(f"Erro shortest_path: {e}")
-
-    st.divider()
-
-    st.subheader("Dijkstra (Caminho Ponderado)")
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        start_dijkstra = st.selectbox("Usuário inicial (Dijkstra)", users, key="dijkstra")
-    with col2:
-        if st.button("Executar Dijkstra"):
-            params = {"start_user": start_dijkstra} if mapping else {"start_index": int(start_dijkstra)}
-            try:
-                r = api_get("/graph/dijkstra", params=params)
-                r.raise_for_status()
-                data = r.json()
-                distances = data.get('distances', {})
-                df_dijkstra = pd.DataFrame([
-                    {"Usuário": idx_label(int(v), mapping), "Distância": d}
-                    for v, d in sorted({int(k): v for k, v in distances.items()}.items(), key=lambda x: x[1])
-                    if d != float('inf')
-                ])
-                st.dataframe(df_dijkstra.head(20), use_container_width=True)
-            except Exception as e:
-                st.error(f"Erro Dijkstra: {e}")
-
     st.divider()
 
     st.subheader("K-Hop Neighbors")
