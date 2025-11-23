@@ -660,15 +660,14 @@ with tab4:
                     st.divider()
                     st.write("**Interpretação da Modularidade:**")
                     if modularity > 0.4:
-                        st.success("🔹 **Modularidade alta** - Comunidades muito bem definidas, times informais claros")
+                        st.success(" **Modularidade alta** - Comunidades muito bem definidas, times informais claros")
                     elif modularity > 0.3:
-                        st.info("🔹 **Modularidade boa** - Comunidades razoavelmente definidas")
+                        st.info(" **Modularidade boa** - Comunidades razoavelmente definidas")
                     elif modularity > 0.1:
-                        st.warning("🔹 **Modularidade moderada** - Comunidades menos evidentes")
+                        st.warning(" **Modularidade moderada** - Comunidades menos evidentes")
                     else:
-                        st.error("🔹 **Modularidade baixa** - Estrutura de comunidades fraca")
+                        st.error(" **Modularidade baixa** - Estrutura de comunidades fraca")
                     
-                    st.info("💡 **Significado:** Identifica grupos de colaboradores que trabalham mais frequentemente juntos (times informais dentro do projeto). A modularidade mede a qualidade dessa divisão.")
                     
                 except Exception as e:
                     st.error(f"Erro ao detectar comunidades: {e}")
