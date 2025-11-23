@@ -390,6 +390,55 @@ with tab1:
         fig_out = px.histogram(out_degrees, nbins=10, title="Out-Degree", labels={'value': 'Out-Degree', 'count': 'Frequência'})
         st.plotly_chart(fig_out, use_container_width=True)
 
+    # ========================================
+    # REPRESENTAÇÃO DA ESTRUTURA (LISTA OU MATRIZ)
+    # ========================================
+
+    st.divider()
+    st.subheader("Representação Estrutural do Grafo")
+
+    impl_label = st.session_state.get("implementation") or "Lista de Adjacência"
+    impl_internal = "list" if impl_label in ("Lista de Adjacência", "list") else "matrix"
+
+    rep_mode = st.radio(
+        "Forma de visualização da implementação atual",
+        ["Lista de Adjacência", "Matriz de Adjacência"],
+        index=0 if impl_internal == "list" else 1,
+        horizontal=True,
+        help="Apenas muda como a estrutura é exibida na tela (não altera o grafo no servidor)."
+    )
+
+    # Usamos as arestas exportadas via API (já carregadas em session_state.edges)
+    edges = st.session_state.edges
+    num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, st.session_state.mapping)
+
+    if rep_mode == "Lista de Adjacência":
+        st.markdown("**Lista de Adjacência (u → v [peso])**")
+        lines = []
+        for u in range(num_vertices):
+            succs = []
+            for v in adjacency.get(u, []):
+                w = weight_map.get((u, v), 1.0)
+                succs.append(f"{v} (w={w:.1f})")
+            line = f"{u}----> " + "----> ".join(succs) +"--↓" if succs else f"{u}--↓"
+            lines.append(line)
+        st.code("\n".join(lines), language="text")
+    else:
+        st.markdown("**Matriz de Adjacência (peso 0 = sem aresta)**")
+        # constrói matriz numérica a partir de weight_map; se não houver peso, usa 1 para aresta existente
+        matrix = [[0.0 for _ in range(num_vertices)] for _ in range(num_vertices)]
+        for (u, v), w in weight_map.items():
+            if 0 <= u < num_vertices and 0 <= v < num_vertices:
+                matrix[u][v] = float(w)
+        # se alguma aresta não tiver peso registrado em weight_map mas existir em adjacency, coloca 1.0
+        for u in range(num_vertices):
+            for v in adjacency.get(u, []):
+                if matrix[u][v] == 0.0:
+                    matrix[u][v] = 1.0
+
+        df_mat = pd.DataFrame(matrix, index=[f"{i}" for i in range(num_vertices)], columns=[f"{j}" for j in range(num_vertices)])
+        st.dataframe(df_mat, use_container_width=True, height=min(400, 40 + 24 * num_vertices))
+
 
 
 with tab2:
