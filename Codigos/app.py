@@ -281,12 +281,10 @@ if not st.session_state.graph_loaded:
 # TABS PRINCIPAIS
 # ========================================
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Visão Geral",
     "Busca e Caminhos", 
     "Centralidade",
-    "Componentes",
-    "Ciclos e Ordem",
     "Métricas Avançadas",
     "Edição do Grafo",
     "Exportação"
@@ -389,13 +387,10 @@ with tab1:
 
     with col2:
         out_degrees = [len(adjacency.get(i, [])) for i in range(num_vertices)]
-        fig_out = px.histogram(out_degrees, nbins=20, title="Out-Degree", labels={'value': 'Out-Degree', 'count': 'Frequência'})
+        fig_out = px.histogram(out_degrees, nbins=10, title="Out-Degree", labels={'value': 'Out-Degree', 'count': 'Frequência'})
         st.plotly_chart(fig_out, use_container_width=True)
 
 
-# ========================================
-# TAB 2: BUSCA E CAMINHOS
-# ========================================
 
 with tab2:
     st.header("Algoritmos de Busca e Caminhos")
@@ -404,7 +399,6 @@ with tab2:
     mapping = st.session_state.mapping
     num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, mapping)
 
-    # Prepare user list for selects
     if mapping:
         users = sorted(mapping.values())
     else:
@@ -431,26 +425,6 @@ with tab2:
                     st.warning("Não há caminho entre esses usuários")
             except Exception as e:
                 st.error(f"Erro shortest_path: {e}")
-    st.divider()
-
-    st.subheader("K-Hop Neighbors")
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
-        khop_user = st.selectbox("Usuário central", users, key="khop")
-    with col2:
-        k = st.number_input("K (número de saltos)", min_value=1, max_value=5, value=2)
-    with col3:
-        if st.button("Buscar Vizinhos"):
-            params = {"vertex_user": khop_user, "k": k} if mapping else {"vertex_index": int(khop_user), "k": k}
-            try:
-                r = api_get("/graph/khop", params=params)
-                r.raise_for_status()
-                neighbors = r.json().get('neighbors', [])
-                neighbor_users = [idx_label(int(v), mapping) for v in neighbors]
-                st.success(f"{len(neighbors)} vizinhos encontrados a {k} saltos")
-                st.write(", ".join(sorted(neighbor_users)[:30]))
-            except Exception as e:
-                st.error(f"Erro k-hop: {e}")
 
 
 # ========================================
@@ -498,13 +472,6 @@ with tab3:
                 # 4. PageRank
                 centralities['PageRank'] = nx.pagerank(G)
                 
-                # 5. Eigenvector Centrality
-                try:
-                    centralities['Eigenvector'] = nx.eigenvector_centrality(G, max_iter=1000)
-                except:
-                    st.warning("Eigenvector não pôde ser calculado")
-                    centralities['Eigenvector'] = {node: 0.0 for node in G.nodes()}
-                
                 # Salva no session state
                 st.session_state.centralities = centralities
                 
@@ -546,122 +513,19 @@ with tab3:
 
 
 # ========================================
-# TAB 4: COMPONENTES
-# ========================================
-
-with tab4:
-    st.header("Análise de Componentes")
-
-    edges = st.session_state.edges
-    mapping = st.session_state.mapping
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Componentes Fortemente Conectados")
-
-        if st.button("Detectar SCC"):
-            with st.spinner("Analisando..."):
-                try:
-                    r = api_get("/graph/scc")
-                    r.raise_for_status()
-                    sccs = r.json().get('sccs', [])
-                    st.success(f"{len(sccs)} componentes encontrados")
-
-                    sizes = sorted([len(scc) for scc in sccs], reverse=True)
-                    df_sccs = pd.DataFrame({
-                        'Componente': range(1, len(sizes) + 1),
-                        'Tamanho': sizes
-                    })
-                    st.dataframe(df_sccs.head(10), use_container_width=True)
-                    fig = px.bar(df_sccs.head(10), x='Componente', y='Tamanho', title='Tamanho dos SCCs')
-                    st.plotly_chart(fig, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Erro ao detectar SCC: {e}")
-
-    with col2:
-        st.subheader("Componentes Fracamente Conectados")
-
-        if st.button("Detectar WCC"):
-            with st.spinner("Analisando..."):
-                try:
-                    r = api_get("/graph/wcc")
-                    r.raise_for_status()
-                    wccs = r.json().get('wccs', [])
-                    st.success(f"{len(wccs)} componentes encontrados")
-
-                    sizes = sorted([len(wcc) for wcc in wccs], reverse=True)
-                    df_wccs = pd.DataFrame({
-                        'Componente': range(1, len(sizes) + 1),
-                        'Tamanho': sizes
-                    })
-                    st.dataframe(df_wccs.head(10), use_container_width=True)
-                    fig = px.bar(df_wccs.head(10), x='Componente', y='Tamanho', title='Tamanho dos WCCs')
-                    st.plotly_chart(fig, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Erro ao detectar WCC: {e}")
-
-
-# ========================================
-# TAB 5: CICLOS E ORDENAÇÃO
-# ========================================
-
-with tab5:
-    st.header("Detecção de Ciclos e Ordenação Topológica")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Detecção de Ciclos")
-
-        if st.button("Verificar Ciclo"):
-            try:
-                r = api_get("/graph/has_cycle")
-                r.raise_for_status()
-                has_cycle = r.json().get('has_cycle')
-                if has_cycle:
-                    st.error("O grafo contém ciclos")
-                else:
-                    st.success("O grafo é acíclico (DAG)")
-            except Exception as e:
-                st.error(f"Erro ao verificar ciclo: {e}")
-
-    with col2:
-        st.subheader("Ordenação Topológica")
-
-        if st.button("Calcular Ordem"):
-            try:
-                r = api_get("/graph/topo_sort")
-                r.raise_for_status()
-                topo_sort = r.json().get('topological_sort')
-                if topo_sort:
-                    topo_users = [idx_label(v, st.session_state.mapping) for v in topo_sort[:50]]
-                    st.success("Ordenação topológica encontrada")
-                    df_topo = pd.DataFrame({
-                        'Posição': range(1, len(topo_users) + 1),
-                        'Usuário': topo_users
-                    })
-                    st.dataframe(df_topo, use_container_width=True)
-                else:
-                    st.error("Grafo contém ciclos - ordenação topológica impossível")
-            except Exception as e:
-                st.error(f"Erro topo_sort: {e}")
-
-
-# ========================================
 # TAB 6: MÉTRICAS AVANÇADAS
 # ========================================
 
-with tab6:
+with tab4:
     st.header("Métricas Avançadas")
 
     col1, col2 = st.columns(2)
 
    # ========================================
-# TAB 6: MÉTRICAS AVANÇADAS
+# TAB 5: MÉTRICAS AVANÇADAS
 # ========================================
 
-with tab6:
+with tab4:
     st.header("Métricas Avançadas")
 
     edges = st.session_state.edges
@@ -996,7 +860,7 @@ with tab6:
 # TAB 7: EDIÇÃO DO GRAFO
 # ========================================
 
-with tab7:
+with tab5:
     st.header("Edição do Grafo")
     
     st.info("**Importante**: Certifique-se de que o grafo está carregado antes de realizar operações de edição.")
@@ -1158,8 +1022,7 @@ with tab7:
         new_edge_weight = st.number_input("Novo Peso", min_value=0.0, value=1.0, step=0.1, key="new_edge_weight")
     
     with col4:
-        st.write("")  # spacing
-        st.write("")  # spacing
+        st.write("")  
         if st.button("Alterar", use_container_width=True):
             try:
                 # Convert label back to index
@@ -1269,13 +1132,131 @@ with tab7:
             except Exception as e:
                 st.error(f"Erro ao consultar peso do vértice: {e}")
     
+    # ========================================
+    # VERIFICAÇÕES RÁPIDAS (client-side)
+    # ========================================
+    st.divider()
+    st.subheader("Verificações Rápidas")
+
+    # Rebuild local structures (fresh from session state)
+    edges = st.session_state.edges
+    mapping = st.session_state.mapping
+    num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, mapping)
+
+    def label_to_index(label):
+        if mapping:
+            for k, v in mapping.items():
+                if v == label:
+                    try:
+                        return int(k)
+                    except Exception:
+                        return k
+            raise ValueError("Label not found")
+        else:
+            return int(label)
+
+    # isDivergent: same source, different targets
+    with st.expander("isDivergent (mesma origem, alvos diferentes)"):
+        c1, c2 = st.columns(2)
+        with c1:
+            d_u1 = st.selectbox("Origem 1 (u1)", vertices, key="div_u1")
+            d_v1 = st.selectbox("Destino 1 (v1)", vertices, key="div_v1")
+        with c2:
+            d_u2 = st.selectbox("Origem 2 (u2)", vertices, key="div_u2")
+            d_v2 = st.selectbox("Destino 2 (v2)", vertices, key="div_v2")
+        if st.button("Verificar Divergente", key="check_divergent"):
+            try:
+                u1 = label_to_index(d_u1)
+                v1 = label_to_index(d_v1)
+                u2 = label_to_index(d_u2)
+                v2 = label_to_index(d_v2)
+                is_div = (u1 == u2) and (v1 != v2)
+                exists1 = v1 in adjacency.get(int(u1), [])
+                exists2 = v2 in adjacency.get(int(u2), [])
+                if is_div and exists1 and exists2:
+                    st.success("Divergente: True — mesma origem, alvos diferentes e ambas as arestas existem")
+                elif is_div:
+                    st.warning("Mesmo origem e alvos diferentes, mas uma ou ambas as arestas não existem")
+                else:
+                    st.info("Divergente: False")
+            except Exception as e:
+                st.error(f"Erro ao verificar divergent: {e}")
+
+    # isConvergent: same target, different sources
+    with st.expander("isConvergent (mesmo destino, origens diferentes)"):
+        c1, c2 = st.columns(2)
+        with c1:
+            c_u1 = st.selectbox("Origem 1 (u1)", vertices, key="conv_u1")
+            c_v1 = st.selectbox("Destino 1 (v1)", vertices, key="conv_v1")
+        with c2:
+            c_u2 = st.selectbox("Origem 2 (u2)", vertices, key="conv_u2")
+            c_v2 = st.selectbox("Destino 2 (v2)", vertices, key="conv_v2")
+        if st.button("Verificar Convergente", key="check_convergent"):
+            try:
+                u1 = label_to_index(c_u1)
+                v1 = label_to_index(c_v1)
+                u2 = label_to_index(c_u2)
+                v2 = label_to_index(c_v2)
+                is_conv = (v1 == v2) and (u1 != u2)
+                exists1 = v1 in adjacency.get(int(u1), [])
+                exists2 = v2 in adjacency.get(int(u2), [])
+                if is_conv and exists1 and exists2:
+                    st.success("Convergente: True — mesmo destino, origens diferentes e ambas as arestas existem")
+                elif is_conv:
+                    st.warning("Mesmo destino e origens diferentes, mas uma ou ambas as arestas não existem")
+                else:
+                    st.info("Convergente: False")
+            except Exception as e:
+                st.error(f"Erro ao verificar convergent: {e}")
+
+    # isIncident: whether vertex x is incident to edge (u,v)
+    with st.expander("isIncident (vértice incidente a aresta)"):
+        ic1, ic2 = st.columns(2)
+        with ic1:
+            i_u = st.selectbox("Aresta Origem (u)", vertices, key="inc_u")
+            i_v = st.selectbox("Aresta Destino (v)", vertices, key="inc_v")
+        with ic2:
+            i_x = st.selectbox("Vértice (x)", vertices, key="inc_x")
+        if st.button("Verificar Incidente", key="check_incident"):
+            try:
+                u = label_to_index(i_u)
+                v = label_to_index(i_v)
+                x = label_to_index(i_x)
+                incident = (x == u) or (x == v)
+                # also check if edge exists
+                edge_exists = v in adjacency.get(int(u), [])
+                if incident and edge_exists:
+                    st.success(f"Incidente: True — {i_x} é incidente à aresta ({i_u} → {i_v}) e a aresta existe")
+                elif incident:
+                    st.warning(f"{i_x} corresponde a u ou v, mas a aresta ({i_u} → {i_v}) não existe")
+                else:
+                    st.info("Incidente: False")
+            except Exception as e:
+                st.error(f"Erro ao verificar incident: {e}")
+
+    # isCompleteGraph: check if density == 1.0 (directed complete)
+    with st.expander("isCompleteGraph (grafo completo)"):
+        if st.button("Verificar Grafo Completo", key="check_complete"):
+            try:
+                num_nodes = num_vertices
+                num_edges = len(edges)
+                max_edges = num_nodes * (num_nodes - 1) if num_nodes > 0 else 0
+                density = (num_edges / max_edges) if max_edges > 0 else 0.0
+                is_complete = (max_edges > 0) and (num_edges == max_edges)
+                st.metric("Densidade", f"{density:.4f}")
+                if is_complete:
+                    st.success("Grafo completo: Sim (todas as arestas direcionadas presentes)")
+                else:
+                    st.info(f"Grafo completo: Não — {num_edges} de {max_edges} arestas ({density*100:.2f}%)")
+            except Exception as e:
+                st.error(f"Erro ao verificar complete: {e}")
 
 
 # ========================================
 # TAB 8: EXPORTAÇÃO
 # ========================================
 
-with tab8:
+with tab6:
     st.header("Exportação de Dados")
 
     st.subheader("Exportar para CSV (Gephi)")
@@ -1301,28 +1282,6 @@ with tab8:
 
     st.divider()
 
-    st.subheader("Exportar Lista de Arestas")
-    st.info("**Formato texto simples** - Lista de arestas com origem, destino e peso")
-
-    edge_filename = st.text_input("Nome do arquivo de arestas", "edge_list.txt")
-
-    if st.button("Exportar Lista", use_container_width=True):
-        try:
-            # Download plain text edge list from API
-            edges_txt = api_download_text("/graph/export_edges", params={"filename": edge_filename})
-            st.success(f"Lista de arestas gerada: {edge_filename}")
-
-            st.download_button(
-                label="Baixar lista de arestas",
-                data=edges_txt,
-                file_name=edge_filename,
-                mime="text/plain",
-                use_container_width=True
-            )
-        except Exception as e:
-            st.error(f"Erro ao exportar lista: {e}")
-
-
 # ========================================
 # FOOTER
 # ========================================
@@ -1335,42 +1294,3 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-
-# ========================================
-# FUNÇÕES AUXILIARES ADICIONAIS
-# ========================================
-
-def show_graph_comparison():
-    """Mostra comparação entre implementações."""
-    st.sidebar.divider()
-    st.sidebar.subheader("Comparação de Implementações")
-    
-    comparison_data = {
-        'Característica': [
-            'Acesso a Aresta',
-            'Iteração Vizinhos',
-            'Memória (Grafo Esparso)',
-            'Memória (Grafo Denso)',
-            'Melhor Para'
-        ],
-        'Lista de Adjacência': [
-            'O(grau médio)',
-            'O(grau)',
-            'Eficiente',
-            'Menos eficiente',
-            'Grafos esparsos'
-        ],
-        'Matriz de Adjacência': [
-            'O(1)',
-            'O(n)',
-            'Menos eficiente',
-            'Eficiente',
-            'Grafos densos'
-        ]
-    }
-    
-    df_comparison = pd.DataFrame(comparison_data)
-    st.sidebar.dataframe(df_comparison, use_container_width=True)
-
-# Chama comparação
-show_graph_comparison()
