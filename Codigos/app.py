@@ -410,53 +410,6 @@ with tab2:
     else:
         users = [str(i) for i in range(num_vertices)]
 
-    st.subheader("BFS - Busca em Largura")
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        start_user_bfs = st.selectbox("Usuário inicial (BFS)", users, key="bfs_start")
-
-    with col2:
-        if st.button("Executar BFS"):
-            params = {"start_user": start_user_bfs} if mapping else {"start_index": int(start_user_bfs)}
-            try:
-                r = api_get("/graph/bfs", params=params)
-                r.raise_for_status()
-                distances = r.json().get('distances', {})
-                # distances keys are strings
-                df_distances = pd.DataFrame([
-                    {"Usuário": idx_label(int(k), mapping), "Distância": v}
-                    for k, v in sorted({int(k): v for k, v in distances.items()}.items(), key=lambda x: x[1])
-                ])
-                st.dataframe(df_distances, use_container_width=True)
-                st.info(f"Alcançados: {len(distances)} vértices")
-            except Exception as e:
-                st.error(f"Erro BFS: {e}")
-
-    st.divider()
-
-    st.subheader("DFS - Busca em Profundidade")
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
-        start_user_dfs = st.selectbox("Usuário inicial (DFS)", users, key="dfs_start")
-    with col2:
-        dfs_type = st.radio("Tipo DFS", ["Iterativa", "Recursiva"], key="dfs_type")
-    with col3:
-        if st.button("Executar DFS"):
-            params = {"start_user": start_user_dfs, "mode": "iterative" if dfs_type == "Iterativa" else "recursive"} if mapping else {"start_index": int(start_user_dfs), "mode": "iterative" if dfs_type == "Iterativa" else "recursive"}
-            try:
-                r = api_get("/graph/dfs", params=params)
-                r.raise_for_status()
-                visited = r.json().get('visited', [])
-                visited_users = [idx_label(int(v), mapping) for v in visited]
-                st.write("**Ordem de visita:**")
-                st.write(" → ".join(visited_users[:20]) + ("..." if len(visited_users) > 20 else ""))
-                st.info(f"Visitados: {len(visited)} vértices")
-            except Exception as e:
-                st.error(f"Erro DFS: {e}")
-
-    st.divider()
-
     st.subheader("Caminho Mais Curto")
     col1, col2, col3 = st.columns([2, 2, 1])
     with col1:
