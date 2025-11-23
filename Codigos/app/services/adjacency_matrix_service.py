@@ -1,8 +1,3 @@
-"""
-Serviço especializado para algoritmos em Matriz de Adjacência.
-Implementa algoritmos otimizados para a estrutura de matriz.
-"""
-
 from typing import List, Tuple, Dict, Set, Optional, Deque
 from collections import deque, defaultdict
 from ..models.adjacency_matrix_graph import AdjacencyMatrixGraph
@@ -11,29 +6,15 @@ import math
 
 
 class AdjacencyMatrixService:
-    """
-    Serviço especializado para grafos com matriz de adjacência.
-    Otimizado para grafos densos e operações que se beneficiam de acesso O(1) a arestas.
-    """
-
     def __init__(self, repository: Neo4jRepository):
         self.repository = repository
         self.user_to_index: Dict[str, int] = {}
         self.index_to_user: Dict[int, str] = {}
 
-    # ========================================
-    # CONSTRUÇÃO DE GRAFOS
-    # ========================================
-
     def build_graph_from_interactions(
         self, 
         interactions: List[Tuple[str, str, int]]
     ) -> AdjacencyMatrixGraph:
-        """
-        Constrói grafo a partir de interações do Neo4j.
-        :param interactions: Lista de tuplas (source, target, weight)
-        :return: Grafo construído
-        """
         self._build_user_mapping(interactions)
         graph = AdjacencyMatrixGraph(len(self.user_to_index))
         
@@ -51,41 +32,26 @@ class AdjacencyMatrixService:
         return graph
 
     def build_comments_graph(self) -> AdjacencyMatrixGraph:
-        """Constrói grafo de comentários."""
         interactions = self.repository.fetch_comments_interactions()
         return self.build_graph_from_interactions(interactions)
 
     def build_issues_graph(self) -> AdjacencyMatrixGraph:
-        """Constrói grafo de fechamento de issues."""
         interactions = self.repository.fetch_issue_closure_interactions()
         return self.build_graph_from_interactions(interactions)
 
     def build_reviews_graph(self) -> AdjacencyMatrixGraph:
-        """Constrói grafo de revisões/aprovações."""
         interactions = self.repository.fetch_review_interactions()
         return self.build_graph_from_interactions(interactions)
 
     def build_integrated_graph(self) -> AdjacencyMatrixGraph:
-        """Constrói grafo integrado com todas as interações."""
         interactions = self.repository.fetch_integrated_interactions()
         return self.build_graph_from_interactions(interactions)
-
-    # ========================================
-    # ALGORITMOS DE BUSCA (OTIMIZADOS PARA MATRIZ)
-    # ========================================
 
     def bfs(
         self, 
         graph: AdjacencyMatrixGraph, 
         start: int
     ) -> Dict[int, int]:
-        """
-        Busca em Largura (BFS) otimizada para matriz.
-        Usa acesso direto O(1) à matriz para verificar arestas.
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :return: Dicionário {vértice: distância}
-        """
         graph._validate_vertex(start)
         
         distances = {start: 0}
@@ -110,12 +76,6 @@ class AdjacencyMatrixService:
         graph: AdjacencyMatrixGraph, 
         start: int
     ) -> List[int]:
-        """
-        Busca em Profundidade (DFS) iterativa otimizada para matriz.
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :return: Lista de vértices visitados
-        """
         graph._validate_vertex(start)
         
         visited = []
@@ -140,12 +100,6 @@ class AdjacencyMatrixService:
         graph: AdjacencyMatrixGraph, 
         start: int
     ) -> List[int]:
-        """
-        Busca em Profundidade (DFS) recursiva.
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :return: Lista de vértices visitados
-        """
         graph._validate_vertex(start)
         
         visited_set = [False] * graph.num_vertices
@@ -161,23 +115,12 @@ class AdjacencyMatrixService:
         dfs_helper(start)
         return visited_list
 
-    # ========================================
-    # CAMINHOS (ALGORITMOS OTIMIZADOS PARA MATRIZ)
-    # ========================================
-
     def find_shortest_path(
         self, 
         graph: AdjacencyMatrixGraph,
         start: int,
         end: int
     ) -> Optional[List[int]]:
-        """
-        Encontra caminho mais curto usando BFS.
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :param end: Vértice final
-        :return: Lista de vértices ou None
-        """
         graph._validate_vertex(start)
         graph._validate_vertex(end)
         
@@ -207,13 +150,6 @@ class AdjacencyMatrixService:
         graph: AdjacencyMatrixGraph,
         start: int
     ) -> Tuple[Dict[int, float], Dict[int, Optional[int]]]:
-        """
-        Algoritmo de Dijkstra otimizado para matriz.
-        Usa acesso O(1) à matriz para obter pesos.
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :return: (distâncias, predecessores)
-        """
         graph._validate_vertex(start)
         
         import heapq
@@ -250,19 +186,10 @@ class AdjacencyMatrixService:
         self, 
         graph: AdjacencyMatrixGraph
     ) -> Tuple[List[List[float]], List[List[Optional[int]]]]:
-        """
-        Algoritmo de Floyd-Warshall (IDEAL PARA MATRIZ!).
-        Calcula todos os caminhos mais curtos entre todos os pares.
-        :param graph: Grafo
-        :return: (matriz de distâncias, matriz de próximos vértices)
-        """
         n = graph.num_vertices
         
-        # Inicializa matrizes
         dist = [[float('inf')] * n for _ in range(n)]
         next_vertex = [[None] * n for _ in range(n)]
-        
-        # Inicializa com arestas diretas
         for i in range(n):
             dist[i][i] = 0
             for j in range(n):
@@ -270,7 +197,6 @@ class AdjacencyMatrixService:
                     dist[i][j] = graph.matrix[i][j]
                     next_vertex[i][j] = j
         
-        # Algoritmo de Floyd-Warshall
         for k in range(n):
             for i in range(n):
                 for j in range(n):
@@ -280,22 +206,12 @@ class AdjacencyMatrixService:
         
         return dist, next_vertex
 
-    # ========================================
-    # COMPONENTES E CONECTIVIDADE
-    # ========================================
-
     def find_strongly_connected_components(
         self, 
         graph: AdjacencyMatrixGraph
     ) -> List[Set[int]]:
-        """
-        Algoritmo de Kosaraju para SCCs usando matriz.
-        :param graph: Grafo
-        :return: Lista de componentes
-        """
         n = graph.num_vertices
         
-        # Primeira DFS
         visited = [False] * n
         stack = []
         
@@ -310,13 +226,11 @@ class AdjacencyMatrixService:
             if not visited[i]:
                 dfs1(i)
         
-        # Cria grafo transposto (inverte arestas)
         transpose = [[0.0 for _ in range(n)] for _ in range(n)]
         for i in range(n):
             for j in range(n):
                 transpose[j][i] = graph.matrix[i][j]
         
-        # Segunda DFS no transposto
         visited = [False] * n
         components = []
         
@@ -340,16 +254,10 @@ class AdjacencyMatrixService:
         self, 
         graph: AdjacencyMatrixGraph
     ) -> List[Set[int]]:
-        """
-        Componentes fracamente conectados usando matriz.
-        :param graph: Grafo
-        :return: Lista de componentes
-        """
         n = graph.num_vertices
         visited = [False] * n
         components = []
         
-        # Cria matriz não-direcionada (simetrica)
         undirected = [[0.0 for _ in range(n)] for _ in range(n)]
         for i in range(n):
             for j in range(n):
@@ -372,16 +280,7 @@ class AdjacencyMatrixService:
         
         return components
 
-    # ========================================
-    # CICLOS E ORDENAÇÃO TOPOLÓGICA
-    # ========================================
-
     def has_cycle(self, graph: AdjacencyMatrixGraph) -> bool:
-        """
-        Verifica se grafo tem ciclo.
-        :param graph: Grafo
-        :return: True se tem ciclo
-        """
         n = graph.num_vertices
         WHITE, GRAY, BLACK = 0, 1, 2
         color = [WHITE] * n
@@ -407,15 +306,9 @@ class AdjacencyMatrixService:
         self, 
         graph: AdjacencyMatrixGraph
     ) -> Optional[List[int]]:
-        """
-        Ordenação topológica (Kahn's algorithm).
-        :param graph: Grafo
-        :return: Lista ordenada ou None se tem ciclo
-        """
         n = graph.num_vertices
         in_degree = [0] * n
         
-        # Calcula grau de entrada usando matriz
         for i in range(n):
             for j in range(n):
                 if graph.matrix[i][j] != 0:
@@ -436,23 +329,12 @@ class AdjacencyMatrixService:
         
         return result if len(result) == n else None
 
-    # ========================================
-    # MÉTRICAS E ANÁLISES
-    # ========================================
-
     def get_k_hop_neighbors(
         self, 
         graph: AdjacencyMatrixGraph,
         vertex: int,
         k: int
     ) -> Set[int]:
-        """
-        Vizinhos a k saltos usando matriz.
-        :param graph: Grafo
-        :param vertex: Vértice central
-        :param k: Número de saltos
-        :return: Conjunto de vizinhos
-        """
         graph._validate_vertex(vertex)
         
         if k == 0:
@@ -480,11 +362,6 @@ class AdjacencyMatrixService:
         graph: AdjacencyMatrixGraph,
         filepath: str
     ):
-        """
-        Exporta lista de arestas da matriz.
-        :param graph: Grafo
-        :param filepath: Caminho do arquivo
-        """
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write("# Source Target Weight\n")
             for i in range(graph.num_vertices):
@@ -492,15 +369,7 @@ class AdjacencyMatrixService:
                     if graph.matrix[i][j] != 0:
                         f.write(f"{i} {j} {graph.matrix[i][j]}\n")
 
-    # ========================================
-    # UTILIDADES
-    # ========================================
-
     def _build_user_mapping(self, interactions: List[Tuple[str, str, int]]):
-        """
-        Constrói mapeamento bidirecional entre usuários e índices.
-        :param interactions: Lista de interações
-        """
         unique_users = set()
         for source, target, _ in interactions:
             unique_users.add(source)

@@ -1,13 +1,10 @@
 from .abstract_graph import AbstractGraph
-import csv
 
 class AdjacencyMatrixGraph(AbstractGraph):
     def __init__(self, num_vertices: int):
         super().__init__(num_vertices)
         self.matrix = [[0.0 for _ in range(num_vertices)] for _ in range(num_vertices)]
         self.edge_count = 0
-
-    # === Métodos obrigatórios ===
     def getVertexCount(self) -> int:
         return self.num_vertices
 
@@ -99,20 +96,12 @@ class AdjacencyMatrixGraph(AbstractGraph):
         return self.edge_count == expected_edges
 
     def exportToGEPHI(self, path: str):
-        """
-        Exporta o grafo para formato CSV (compatível com Gephi).
-        Formato: Source,Target,Weight
-        """
         with open(path, 'w', encoding='utf-8') as f:
-            # Cabeçalho CSV
             f.write('Source,Target,Weight\n')
-            
-            # Arestas
             for i in range(self.num_vertices):
                 for j in range(self.num_vertices):
                     if self.matrix[i][j] != 0:
                         edge_weight = self.getEdgeWeight(i, j)
-                        # Se houver labels, usa labels; senão usa índices
                         source_label = self.vertex_labels[i] if i < len(self.vertex_labels) else str(i)
                         target_label = self.vertex_labels[j] if j < len(self.vertex_labels) else str(j)
                         f.write(f'{source_label},{target_label},{edge_weight}\n')

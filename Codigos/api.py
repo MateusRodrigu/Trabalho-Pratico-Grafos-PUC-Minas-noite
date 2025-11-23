@@ -13,11 +13,9 @@ from Codigos.app.services.adjancency_list_service import AdjacencyListService
 from Codigos.app.services.adjacency_matrix_service import AdjacencyMatrixService
 
 app = FastAPI(title="Graph API", version="0.1")
-
-# Global state (in-memory) - simple prototype
 state_lock = Lock()
 graph_obj = None
-graph_impl = None  # 'list' or 'matrix'
+graph_impl = None
 repo = None
 list_service = None
 matrix_service = None
@@ -25,7 +23,7 @@ last_index_to_user = None
 
 
 class LoadGraphIn(BaseModel):
-    implementation: Optional[str] = "list"  # 'list' or 'matrix'
+    implementation: Optional[str] = "list"
     num_vertices: int
 
 
@@ -38,11 +36,10 @@ class EdgeIn(BaseModel):
 
 class LoadFromDbIn(BaseModel):
     implementation: Optional[str] = "list"
-    graph_type: Optional[str] = "integrated"  # comments, issues, reviews, integrated
+    graph_type: Optional[str] = "integrated"
 
 
 def _ensure_repo_services():
-    """Inicializa repositório e ambos os services (lista e matriz)."""
     global repo, list_service, matrix_service
     if repo is None:
         repo = Neo4jRepository()
@@ -80,37 +77,24 @@ def _convert_matrix_to_list(matrix_graph: AdjacencyMatrixGraph) -> AdjacencyList
                     except Exception:
                         pass
             except Exception:
-                # ignore invalid accesses
                 pass
     return lg
 
 
 def _ensure_graph_as_list():
-    """Return an AdjacencyListGraph instance for current graph_obj (convert if needed)."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     if isinstance(graph_obj, AdjacencyListGraph):
         return graph_obj
-    # convert matrix to list
     return _convert_matrix_to_list(graph_obj)
 
 
 def _ensure_graph(prefer: Optional[str] = None):
-    """Ensure and return a graph object using the preferred implementation.
-
-    If `prefer` startswith 'mat' the server will ensure the global `graph_obj`
-    is an `AdjacencyMatrixGraph` (converting and persisting if needed). Otherwise
-    it will ensure an `AdjacencyListGraph` instance.
-    Returns the graph object (possibly converted) and updates `graph_impl`.
-    """
     global graph_obj, graph_impl
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     if not prefer:
         return graph_obj
-
-
-    
 
     pref = prefer.lower()
     with state_lock:
@@ -131,11 +115,6 @@ def _ensure_graph(prefer: Optional[str] = None):
 
 
 def _get_current_service(prefer: Optional[str] = None):
-    """Retorna o service correto baseado na implementação do grafo.
-    
-    Se `prefer` for especificado, garante que o graph_obj seja convertido
-    para a implementação preferida antes de retornar o service.
-    """
     global graph_obj, graph_impl
     
     if graph_obj is None:
@@ -143,7 +122,6 @@ def _get_current_service(prefer: Optional[str] = None):
     
     _ensure_repo_services()
     
-    # Se prefer foi especificado, converte o grafo se necessário
     if prefer:
         pref = prefer.lower()
         with state_lock:
@@ -156,7 +134,6 @@ def _get_current_service(prefer: Optional[str] = None):
                     graph_obj = _convert_matrix_to_list(graph_obj)
                     graph_impl = 'list'
     
-    # Retorna o service apropriado
     if isinstance(graph_obj, AdjacencyMatrixGraph):
         return matrix_service, graph_obj
     elif isinstance(graph_obj, AdjacencyListGraph):
@@ -168,7 +145,6 @@ def _get_current_service(prefer: Optional[str] = None):
 @app.get("/graph/bfs")
 def api_bfs(start_index: Optional[int] = Query(None), start_user: Optional[str] = Query(None), implementation: Optional[str] = Query(None)):
     svc, g = _get_current_service(prefer=implementation)
-    # determine start
     if start_index is None and start_user is None:
         raise HTTPException(status_code=400, detail="Provide start_index or start_user")
     if start_user is not None:
@@ -177,7 +153,6 @@ def api_bfs(start_index: Optional[int] = Query(None), start_user: Optional[str] 
         start_index = svc.user_to_index[start_user]
     try:
         distances = svc.bfs(g, start_index)
-        # map indices to users if available
         result = {str(k): v for k, v in distances.items()}
         return {"distances": result}
     except Exception as exc:
@@ -327,10 +302,6 @@ def load_graph(payload: LoadGraphIn):
 
 @app.post("/graph/load_db")
 def load_graph_from_db(payload: LoadFromDbIn):
-    """Load graph from Neo4j using AdjacencyListService.
-    payload.graph_type: comments|issues|reviews|integrated
-    payload.implementation: list|matrix
-    """
     global graph_obj, graph_impl, last_index_to_user
     _ensure_repo_services()
 
@@ -352,7 +323,6 @@ def load_graph_from_db(payload: LoadFromDbIn):
             else:
                 graph_obj = lg
                 graph_impl = "list"
-            # store mapping (useful for clients)
             last_index_to_user = dict(list_service.index_to_user)
 
         return {"status": "loaded_from_db", "implementation": graph_impl, "vertices": graph_obj.getVertexCount(), "edges": graph_obj.getEdgeCount()}
@@ -362,7 +332,6 @@ def load_graph_from_db(payload: LoadFromDbIn):
 
 @app.get("/graph/mapping")
 def get_last_mapping():
-    """Return last index->user mapping (if any)."""
     if last_index_to_user is None:
         raise HTTPException(status_code=404, detail="No mapping available")
     return last_index_to_user
@@ -372,7 +341,6 @@ def get_last_mapping():
 def graph_info(implementation: Optional[str] = Query(None)):
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
-    # If caller requested a representation, ensure it (this may convert and persist)
     if implementation:
         _ensure_graph(prefer=implementation)
     return {
@@ -390,12 +358,9 @@ def add_edge(e: EdgeIn):
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
-        # ensure representation preferred by the caller (will persist conversion)
         g = _ensure_graph(prefer=e.implementation)
         with state_lock:
-            # addEdge should be idempotent; call it first
             g.addEdge(e.u, e.v)
-            # set weight (classes may raise if edge nonexistent)
             try:
                 g.setEdgeWeight(e.u, e.v, float(e.weight))
             except Exception:
@@ -441,10 +406,8 @@ def has_edge(u: int = Query(...), v: int = Query(...), implementation: Optional[
 def export_graph(filename: Optional[str] = Query("graph_export.csv"), implementation: Optional[str] = Query(None)):
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
-    # ensure safe filename
     safe_name = os.path.basename(filename)
     try:
-        # if caller requested a representation, ensure it (may convert and persist)
         if implementation:
             _ensure_graph(prefer=implementation)
         with state_lock:
@@ -456,7 +419,6 @@ def export_graph(filename: Optional[str] = Query("graph_export.csv"), implementa
 
 @app.get("/graph/is_sucessor")
 def is_sucessor(u: int = Query(...), v: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Verifica se v é sucessor de u (existe aresta u -> v)."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -471,7 +433,6 @@ def is_sucessor(u: int = Query(...), v: int = Query(...), implementation: Option
 
 @app.get("/graph/is_predecessor")
 def is_predecessor(u: int = Query(...), v: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Verifica se u é predecessor de v (existe aresta v -> u)."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -486,7 +447,6 @@ def is_predecessor(u: int = Query(...), v: int = Query(...), implementation: Opt
 
 @app.get("/graph/is_divergent")
 def is_divergent(u1: int = Query(...), v1: int = Query(...), u2: int = Query(...), v2: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Verifica se duas arestas (u1->v1) e (u2->v2) são divergentes (mesma origem, destinos diferentes)."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -499,7 +459,6 @@ def is_divergent(u1: int = Query(...), v1: int = Query(...), u2: int = Query(...
 
 @app.get("/graph/is_convergent")
 def is_convergent(u1: int = Query(...), v1: int = Query(...), u2: int = Query(...), v2: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Verifica se duas arestas (u1->v1) e (u2->v2) são convergentes (origens diferentes, mesmo destino)."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -512,7 +471,6 @@ def is_convergent(u1: int = Query(...), v1: int = Query(...), u2: int = Query(..
 
 @app.get("/graph/is_incident")
 def is_incident(u: int = Query(...), v: int = Query(...), x: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Verifica se vértice x é incidente à aresta (u->v)."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -525,7 +483,6 @@ def is_incident(u: int = Query(...), v: int = Query(...), x: int = Query(...), i
 
 @app.get("/graph/vertex_in_degree")
 def get_vertex_in_degree(v: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Retorna o grau de entrada de um vértice."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -543,7 +500,6 @@ def get_vertex_in_degree(v: int = Query(...), implementation: Optional[str] = Qu
 
 @app.get("/graph/vertex_out_degree")
 def get_vertex_out_degree(v: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Retorna o grau de saída de um vértice."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -561,7 +517,6 @@ def get_vertex_out_degree(v: int = Query(...), implementation: Optional[str] = Q
 
 @app.post("/graph/vertex_weight")
 def set_vertex_weight(v: int = Query(...), weight: float = Query(...), implementation: Optional[str] = Query(None)):
-    """Define o peso de um vértice."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -577,7 +532,6 @@ def set_vertex_weight(v: int = Query(...), weight: float = Query(...), implement
 
 @app.get("/graph/vertex_weight")
 def get_vertex_weight(v: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Retorna o peso de um vértice."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -592,7 +546,6 @@ def get_vertex_weight(v: int = Query(...), implementation: Optional[str] = Query
 
 @app.post("/graph/edge_weight")
 def set_edge_weight(u: int = Query(...), v: int = Query(...), weight: float = Query(...), implementation: Optional[str] = Query(None)):
-    """Define o peso de uma aresta."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -610,7 +563,6 @@ def set_edge_weight(u: int = Query(...), v: int = Query(...), weight: float = Qu
 
 @app.get("/graph/edge_weight")
 def get_edge_weight(u: int = Query(...), v: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Retorna o peso de uma aresta."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -625,7 +577,6 @@ def get_edge_weight(u: int = Query(...), v: int = Query(...), implementation: Op
 
 @app.get("/graph/has_edge")
 def has_edge_endpoint(u: int = Query(...), v: int = Query(...), implementation: Optional[str] = Query(None)):
-    """Verifica se existe uma aresta entre u e v."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
@@ -640,15 +591,12 @@ def has_edge_endpoint(u: int = Query(...), v: int = Query(...), implementation: 
 
 @app.post("/graph/export_gephi")
 def export_to_gephi(filename: Optional[str] = Query("graph_export.gexf"), implementation: Optional[str] = Query(None)):
-    """Exporta o grafo para formato GEXF (Gephi)."""
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
-    # ensure safe filename
     safe_name = os.path.basename(filename)
     if not safe_name.endswith('.gexf'):
         safe_name += '.gexf'
     try:
-        # if caller requested a representation, ensure it (may convert and persist)
         if implementation:
             _ensure_graph(prefer=implementation)
         with state_lock:

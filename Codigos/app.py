@@ -1,9 +1,3 @@
-# ui/streamlit_app.py
-"""
-Interface Streamlit completa para análise de grafos GitHub.
-Permite acesso a todas as funcionalidades de Matrix e List services.
-"""
-
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
@@ -12,15 +6,8 @@ import networkx as nx
 from pyvis.network import Network
 import tempfile
 import os
-
-# Use HTTP API instead of directly calling services
 import requests
 from urllib.parse import urljoin
-
-
-# ========================================
-# CONFIGURAÇÃO
-# ========================================
 
 st.set_page_config(
     page_title="Analisador de Grafos GitHub",
@@ -28,8 +15,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# CSS customizado
 st.markdown("""
 <style>
     .main-header {
@@ -57,19 +42,10 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-
-# ========================================
-# INICIALIZAÇÃO
-# ========================================
-
-# Read API base from environment or fallback to default. Avoid using `st.secrets` to
-# prevent StreamlitSecretNotFoundError when no secrets.toml exists in the environment.
 API_BASE = os.environ.get("API_BASE") or "http://127.0.0.1:8000"
 
 
 def api_post(path: str, json=None):
-    # inject implementation param automatically from session state unless caller provided one
     impl = None
     if st.session_state.get('implementation'):
         # session stores UI label or internal; accept both
@@ -142,7 +118,6 @@ def build_graph_structures(edges, mapping=None):
 def idx_label(idx, mapping=None):
     if not mapping:
         return str(idx)
-    # mapping keys may be strings
     if isinstance(mapping, dict):
         if str(idx) in mapping:
             return mapping[str(idx)]
@@ -150,7 +125,6 @@ def idx_label(idx, mapping=None):
             return mapping[idx]
     return str(idx)
 
-# Session state
 if 'graph_loaded' not in st.session_state:
     st.session_state.graph_loaded = False
 if 'graph_type' not in st.session_state:
@@ -161,34 +135,18 @@ if 'mapping' not in st.session_state:
     st.session_state.mapping = None
 if 'edges' not in st.session_state:
     st.session_state.edges = []
-
-
-# ========================================
-# HEADER
-# ========================================
-
 st.markdown('<h1 class="main-header">Analisador de Rede de Colaboração GitHub</h1>', unsafe_allow_html=True)
 st.markdown("**Análise completa de grafos de colaboração usando Matriz de Adjacência e Lista de Adjacência**")
 st.divider()
 
-
-# ========================================
-# SIDEBAR - CONFIGURAÇÕES
-# ========================================
-
 with st.sidebar:
     st.header("Configurações do Grafo")
-    
-    # Escolha da implementação
     implementation = st.radio(
         "Implementação do Grafo",
         ["Lista de Adjacência", "Matriz de Adjacência"],
         help="Lista: melhor para grafos esparsos (GitHub). Matriz: melhor para análises matriciais."
     )
-    # persist UI choice so api helpers can inject the correct parameter
     st.session_state.implementation = implementation
-    
-    # Tipo de grafo
     graph_type_map = {
         "Comentários": "comments",
         "Fechamento de Issues": "issues", 
@@ -202,12 +160,9 @@ with st.sidebar:
     )
     
     graph_type = graph_type_map[graph_type_display]
-    
-    # Botão para carregar grafo
     if st.button("Carregar Grafo", type="primary", use_container_width=True):
         with st.spinner(f"Construindo grafo {implementation.lower()}..."):
             try:
-                # Call API to load graph from DB (the app previously used repo/service to build from DB)
                 payload = {
                     "implementation": "list" if implementation == "Lista de Adjacência" else "matrix",
                     "graph_type": graph_type
@@ -216,14 +171,12 @@ with st.sidebar:
                 r.raise_for_status()
                 info = r.json()
 
-                # Fetch general info and mapping (mapping available after load_db)
                 info = api_get(urljoin(API_BASE, "/graph/info")).json()
                 try:
                     mapping = api_get(urljoin(API_BASE, "/graph/mapping")).json()
                 except Exception:
                     mapping = None
 
-                # Fetch edges (edge list) to reconstruct adjacency locally for visualization and metrics
                 edges_txt = api_download_text("/graph/export_edges", params={"filename": "temp_edges.txt"})
                 edges = []
                 for line in edges_txt.splitlines():
@@ -235,7 +188,6 @@ with st.sidebar:
                         u, v, w = int(parts[0]), int(parts[1]), float(parts[2])
                         edges.append((u, v, w))
 
-                # Save minimal session state
                 st.session_state.graph_loaded = True
                 st.session_state.graph_type = graph_type_display
                 st.session_state.implementation = implementation
@@ -248,7 +200,6 @@ with st.sidebar:
     
     st.divider()
     
-    # Informações do grafo atual
     if st.session_state.graph_loaded:
         st.subheader("Grafo Atual")
         num_vertices, adjacency, in_adj, weight_map = build_graph_structures(st.session_state.edges, st.session_state.mapping)
@@ -267,19 +218,9 @@ with st.sidebar:
             st.session_state.edges = []
             st.rerun()
 
-
-# ========================================
-# VERIFICAÇÃO DE GRAFO CARREGADO
-# ========================================
-
 if not st.session_state.graph_loaded:
     st.info("**Configure e carregue um grafo na barra lateral para começar a análise**")
     st.stop()
-
-
-# ========================================
-# TABS PRINCIPAIS
-# ========================================
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Visão Geral",
@@ -290,26 +231,18 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Exportação"
 ])
 
-
-# ========================================
-# TAB 1: VISÃO GERAL
-# ========================================
-
 with tab1:
     st.header("Visão Geral do Grafo")
 
-    # Reconstruct local structures from edge export
     edges = st.session_state.edges
     mapping = st.session_state.mapping
     num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, mapping)
 
-    # Try to fetch additional info from API (is_connected, is_empty, etc.)
     try:
         info = api_get("/graph/info").json()
     except Exception:
         info = None
 
-    # Métricas principais
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -324,13 +257,10 @@ with tab1:
         st.metric("Vazio", "Sim" if is_empty else "Não")
 
     st.divider()
-
-    # Visualização do grafo
     st.subheader("Visualização Interativa")
 
     if st.button("Gerar Visualização (Pyvis)"):
         with st.spinner("Renderizando grafo..."):
-            # Converte para NetworkX
             G = nx.DiGraph()
 
             for i in range(num_vertices):
@@ -342,7 +272,6 @@ with tab1:
                 v_label = idx_label(v, mapping)
                 G.add_edge(u_label, v_label, weight=w)
 
-            # Cria visualização Pyvis
             net = Network(height="600px", width="100%", bgcolor="#222", font_color="white", directed=True)
 
             for node in G.nodes():
@@ -366,16 +295,12 @@ with tab1:
                 }
             }
             """)
-
-            # Salva e exibe
             net.save_graph("temp_graph.html")
             with open("temp_graph.html", "r", encoding="utf-8") as f:
                 html = f.read()
             st.components.v1.html(html, height=620, scrolling=True)
 
     st.divider()
-
-    # Estatísticas de grau
     st.subheader("Distribuição de Graus")
 
     col1, col2 = st.columns(2)
@@ -389,11 +314,6 @@ with tab1:
         out_degrees = [len(adjacency.get(i, [])) for i in range(num_vertices)]
         fig_out = px.histogram(out_degrees, nbins=10, title="Out-Degree", labels={'value': 'Out-Degree', 'count': 'Frequência'})
         st.plotly_chart(fig_out, use_container_width=True)
-
-    # ========================================
-    # REPRESENTAÇÃO DA ESTRUTURA (LISTA OU MATRIZ)
-    # ========================================
-
     st.divider()
     st.subheader("Representação Estrutural do Grafo")
 
@@ -407,8 +327,6 @@ with tab1:
         horizontal=True,
         help="Apenas muda como a estrutura é exibida na tela (não altera o grafo no servidor)."
     )
-
-    # Usamos as arestas exportadas via API (já carregadas em session_state.edges)
     edges = st.session_state.edges
     num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, st.session_state.mapping)
 
@@ -425,12 +343,10 @@ with tab1:
         st.code("\n".join(lines), language="text")
     else:
         st.markdown("**Matriz de Adjacência (peso 0 = sem aresta)**")
-        # constrói matriz numérica a partir de weight_map; se não houver peso, usa 1 para aresta existente
         matrix = [[0.0 for _ in range(num_vertices)] for _ in range(num_vertices)]
         for (u, v), w in weight_map.items():
             if 0 <= u < num_vertices and 0 <= v < num_vertices:
                 matrix[u][v] = float(w)
-        # se alguma aresta não tiver peso registrado em weight_map mas existir em adjacency, coloca 1.0
         for u in range(num_vertices):
             for v in adjacency.get(u, []):
                 if matrix[u][v] == 0.0:
@@ -475,11 +391,6 @@ with tab2:
             except Exception as e:
                 st.error(f"Erro shortest_path: {e}")
 
-
-# ========================================
-# TAB 3: CENTRALIDADE
-# ========================================
-
 with tab3:
     st.header("Métricas de Centralidade")
     
@@ -490,7 +401,6 @@ with tab3:
     if st.button("Calcular Todas as Centralidades"):
         with st.spinner("Calculando centralidades com NetworkX..."):
             try:
-                # Reconstrói grafo NetworkX a partir das arestas
                 G = nx.DiGraph()
                 
                 for i in range(num_vertices):
@@ -502,26 +412,16 @@ with tab3:
                     v_label = idx_label(v, mapping)
                     G.add_edge(u_label, v_label, weight=w)
                 
-                # Calcula todas as centralidades
                 centralities = {}
-                
-                # 1. Degree Centrality
+
                 centralities['Degree'] = nx.degree_centrality(G)
-                
-                # 2. Betweenness Centrality
                 centralities['Betweenness'] = nx.betweenness_centrality(G)
-                
-                # 3. Closeness Centrality
                 try:
                     centralities['Closeness'] = nx.closeness_centrality(G)
                 except:
                     st.warning("Closeness não pôde ser calculado (grafo desconexo)")
                     centralities['Closeness'] = {node: 0.0 for node in G.nodes()}
-                
-                # 4. PageRank
                 centralities['PageRank'] = nx.pagerank(G)
-                
-                # Salva no session state
                 st.session_state.centralities = centralities
                 
                 st.success(" Centralidades calculadas com sucesso!")
@@ -529,11 +429,9 @@ with tab3:
             except Exception as e:
                 st.error(f"Erro ao calcular centralidades: {e}")
     
-    # Exibição das centralidades
     if 'centralities' in st.session_state:
         centralities = st.session_state.centralities
-        
-        # Tabs para cada métrica
+
         tabs = st.tabs(list(centralities.keys()))
         
         for idx, (metric_name, metric_data) in enumerate(centralities.items()):
@@ -541,13 +439,11 @@ with tab3:
                 col1, col2 = st.columns([1, 1])
                 
                 with col1:
-                    # Top 10 em tabela
                     top_10 = sorted(metric_data.items(), key=lambda x: x[1], reverse=True)[:10]
                     df = pd.DataFrame(top_10, columns=['Usuário', 'Valor'])
                     st.dataframe(df, use_container_width=True, height=400)
                 
                 with col2:
-                    # Gráfico de barras
                     fig = px.bar(
                         df,
                         x='Valor',
@@ -560,19 +456,12 @@ with tab3:
                     fig.update_layout(height=400)
                     st.plotly_chart(fig, use_container_width=True)
 
-
-# ========================================
-# TAB 6: MÉTRICAS AVANÇADAS
-# ========================================
-
 with tab4:
     st.header("Métricas Avançadas")
 
     col1, col2 = st.columns(2)
 
-   # ========================================
-# TAB 5: MÉTRICAS AVANÇADAS
-# ========================================
+
 
 with tab4:
     st.header("Métricas Avançadas")
@@ -581,10 +470,6 @@ with tab4:
     mapping = st.session_state.mapping
     num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, mapping)
 
-    # ========================================
-    # MÉTRICAS DE ESTRUTURA E COESÃO
-    # ========================================
-    
     st.subheader("Métricas de Estrutura e Coesão")
     
     col1, col2, col3 = st.columns(3)
@@ -593,20 +478,17 @@ with tab4:
         if st.button("Densidade da Rede", use_container_width=True):
             with st.spinner("Calculando densidade..."):
                 try:
-                    # Reconstrói NetworkX
                     G = nx.DiGraph()
                     for i in range(num_vertices):
                         G.add_node(idx_label(i, mapping))
                     for u, v, w in edges:
                         G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
-                    
-                    # Calcula densidade
+
                     density = nx.density(G)
-                    
-                    # Informações adicionais
+
                     num_edges = G.number_of_edges()
                     num_nodes = G.number_of_nodes()
-                    max_edges = num_nodes * (num_nodes - 1)  # grafo direcionado
+                    max_edges = num_nodes * (num_nodes - 1)
                     
                     st.metric("Densidade da Rede", f"{density:.4f}")
                     st.write(f"**Arestas existentes:** {num_edges}")
@@ -633,21 +515,17 @@ with tab4:
         if st.button("Coeficiente de Aglomeração", use_container_width=True):
             with st.spinner("Calculando coeficiente de aglomeração..."):
                 try:
-                    # Reconstrói NetworkX
                     G = nx.DiGraph()
                     for i in range(num_vertices):
                         G.add_node(idx_label(i, mapping))
                     for u, v, w in edges:
                         G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
-                    
-                    # Converte para não-direcionado para clustering
+
                     G_undirected = G.to_undirected()
-                    
-                    # Calcula clustering
+
                     avg_clustering = nx.average_clustering(G_undirected)
                     transitivity = nx.transitivity(G_undirected)
-                    
-                    # Clustering por nó (top 10)
+
                     clustering_coeffs = nx.clustering(G_undirected)
                     top_clustered = sorted(clustering_coeffs.items(), key=lambda x: x[1], reverse=True)[:10]
                     
@@ -677,32 +555,24 @@ with tab4:
         if st.button("Assortatividade", use_container_width=True):
             with st.spinner("Calculando assortatividade..."):
                 try:
-                    # Reconstrói NetworkX
                     G = nx.DiGraph()
                     for i in range(num_vertices):
                         G.add_node(idx_label(i, mapping))
                     for u, v, w in edges:
                         G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
-                    
-                    # Calcula assortatividade
                     try:
                         assortativity = nx.degree_assortativity_coefficient(G)
                     except:
                         assortativity = 0.0
                     
                     st.metric("Assortatividade de Grau", f"{assortativity:.4f}")
-                    
-                    # Distribuição de graus
                     in_degrees = dict(G.in_degree())
                     out_degrees = dict(G.out_degree())
                     
                     avg_in = sum(in_degrees.values()) / len(in_degrees)
                     avg_out = sum(out_degrees.values()) / len(out_degrees)
-                    
                     st.write(f"**Grau de entrada médio:** {avg_in:.2f}")
                     st.write(f"**Grau de saída médio:** {avg_out:.2f}")
-                    
-                    # Gráfico de dispersão
                     edge_degrees = []
                     for u, v in G.edges():
                         edge_degrees.append({
@@ -735,10 +605,6 @@ with tab4:
     
     st.divider()
     
-    # ========================================
-    # MÉTRICAS DE COMUNIDADE
-    # ========================================
-    
     st.subheader("Métricas de Comunidade")
     
     col1, col2 = st.columns(2)
@@ -747,17 +613,13 @@ with tab4:
         if st.button("Detecção de Comunidades (Modularidade)", use_container_width=True):
             with st.spinner("Detectando comunidades e calculando modularidade..."):
                 try:
-                    # Reconstrói NetworkX
                     G = nx.DiGraph()
                     for i in range(num_vertices):
                         G.add_node(idx_label(i, mapping))
                     for u, v, w in edges:
                         G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
-                    
-                    # Converte para não-direcionado
+
                     G_undirected = G.to_undirected()
-                    
-                    # Detecta comunidades usando Greedy Modularity
                     communities_gen = nx.community.greedy_modularity_communities(G_undirected)
                     communities = {}
                     for idx, comm in enumerate(communities_gen):
@@ -766,14 +628,11 @@ with tab4:
                     
                     num_communities = len(set(communities.values()))
                     
-                    # Calcula modularidade
                     partition = list(communities_gen)
                     modularity = nx.community.modularity(G_undirected, partition)
                     
                     st.success(f" **{num_communities} comunidades detectadas**")
                     st.metric("Modularidade", f"{modularity:.4f}")
-                    
-                    # Distribuição de tamanhos
                     comm_sizes = {}
                     for node, comm in communities.items():
                         comm_sizes[comm] = comm_sizes.get(comm, 0) + 1
@@ -818,39 +677,30 @@ with tab4:
         if st.button("Bridging Ties (Pontes entre Comunidades)", use_container_width=True):
             with st.spinner("Analisando pontes entre comunidades..."):
                 try:
-                    # Reconstrói NetworkX
                     G = nx.DiGraph()
                     for i in range(num_vertices):
                         G.add_node(idx_label(i, mapping))
                     for u, v, w in edges:
                         G.add_edge(idx_label(u, mapping), idx_label(v, mapping), weight=w)
-                    
                     G_undirected = G.to_undirected()
-                    
-                    # Detecta comunidades primeiro
                     communities_gen = nx.community.greedy_modularity_communities(G_undirected)
                     node_to_community = {}
                     for idx, comm in enumerate(communities_gen):
                         for node in comm:
                             node_to_community[node] = idx
                     
-                    # Calcula betweenness centrality (identifica pontes)
                     betweenness = nx.betweenness_centrality(G)
-                    
-                    # Identifica nós que conectam diferentes comunidades
                     bridge_scores = {}
                     for node in G.nodes():
                         neighbors = list(G.neighbors(node))
                         if not neighbors:
                             continue
                         
-                        # Conta quantas comunidades diferentes este nó conecta
                         neighbor_communities = set()
                         for neighbor in neighbors:
                             if neighbor in node_to_community:
                                 neighbor_communities.add(node_to_community[neighbor])
                         
-                        # Score de ponte: número de comunidades conectadas * betweenness
                         num_connected_communities = len(neighbor_communities)
                         if num_connected_communities > 1:
                             bridge_scores[node] = {
@@ -859,7 +709,6 @@ with tab4:
                                 'bridge_score': betweenness[node] * num_connected_communities
                             }
                     
-                    # Top pontes
                     top_bridges = sorted(bridge_scores.items(), 
                                         key=lambda x: x[1]['bridge_score'], 
                                         reverse=True)[:15]
@@ -880,7 +729,6 @@ with tab4:
                         st.write("**Top 15 Colaboradores-Ponte:**")
                         st.dataframe(df_bridges, use_container_width=True, height=400)
                         
-                        # Gráfico
                         fig = px.bar(df_bridges.head(10), 
                                     x='Colaborador', 
                                     y='Comunidades Conectadas',
@@ -905,28 +753,18 @@ with tab4:
                     
                 except Exception as e:
                     st.error(f"Erro ao analisar pontes: {e}")
-# ========================================
-# TAB 7: EDIÇÃO DO GRAFO
-# ========================================
 
 with tab5:
     st.header("Edição do Grafo")
-    
     st.info("**Importante**: Certifique-se de que o grafo está carregado antes de realizar operações de edição.")
-    
     edges = st.session_state.edges
     mapping = st.session_state.mapping
     num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, mapping)
-    
-    # Prepare vertex list for selects (same as in other tabs)
     if mapping:
         vertices = sorted(mapping.values())
     else:
         vertices = [str(i) for i in range(num_vertices)]
     
-    # ========================================
-    # 1. ADICIONAR ARESTA
-    # ========================================
     st.subheader("Adicionar Aresta")
     
     col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
@@ -941,29 +779,24 @@ with tab5:
         add_weight = st.number_input("Peso (opcional)", min_value=0.0, value=1.0, step=0.1, key="add_weight")
     
     with col4:
-        st.write("")  # spacing
-        st.write("")  # spacing
+        st.write("")
+        st.write("")
         if st.button("Adicionar", use_container_width=True):
             try:
-                # Convert label back to index
                 if mapping:
                     add_u = [k for k, v in mapping.items() if v == add_u_label][0]
                     add_v = [k for k, v in mapping.items() if v == add_v_label][0]
                 else:
                     add_u = int(add_u_label)
                     add_v = int(add_v_label)
-                
-                # Check if edge already exists
                 r_check = api_get("/graph/edge", params={"u": int(add_u), "v": int(add_v)})
                 edge_exists = r_check.json().get("exists", False)
                 
                 if edge_exists:
-                    # Get current weight and add to it
                     r_weight = api_get("/graph/edge_weight", params={"u": int(add_u), "v": int(add_v)})
                     current_weight = r_weight.json().get("weight", 0.0)
                     new_weight = current_weight + float(add_weight)
                     
-                    # Update edge weight - use urljoin and requests.post directly for query params
                     import requests
                     from urllib.parse import urljoin
                     params = {"u": int(add_u), "v": int(add_v), "weight": new_weight}
@@ -972,14 +805,12 @@ with tab5:
                     
                     st.success(f"Aresta ({add_u_label} → {add_v_label}) já existia (peso {current_weight:.1f}). Peso somado: {add_weight:.1f}. Novo peso total: {new_weight:.1f}")
                 else:
-                    # Add new edge
                     payload = {"u": int(add_u), "v": int(add_v), "weight": float(add_weight)}
                     r = api_post("/graph/edge", json=payload)
                     r.raise_for_status()
                     
                     st.success(f"Aresta ({add_u_label} → {add_v_label}) adicionada com peso {add_weight}")
-                
-                # Atualizar session state (recarregar edges)
+
                 edges_txt = api_download_text("/graph/export_edges", params={"filename": "temp_edges.txt"})
                 edges = []
                 for line in edges_txt.splitlines():
@@ -998,9 +829,6 @@ with tab5:
     
     st.divider()
     
-    # ========================================
-    # 2. REMOVER ARESTA
-    # ========================================
     st.subheader("Remover Aresta")
     
     col1, col2, col3 = st.columns([2, 2, 1])
@@ -1012,19 +840,16 @@ with tab5:
         remove_v_label = st.selectbox("Vértice Destino (v)", vertices, key="remove_v", index=1 if len(vertices) > 1 else 0)
     
     with col3:
-        st.write("")  # spacing
-        st.write("")  # spacing
+        st.write("")
+        st.write("")
         if st.button("Remover", use_container_width=True):
             try:
-                # Convert label back to index
                 if mapping:
                     remove_u = [k for k, v in mapping.items() if v == remove_u_label][0]
                     remove_v = [k for k, v in mapping.items() if v == remove_v_label][0]
                 else:
                     remove_u = int(remove_u_label)
                     remove_v = int(remove_v_label)
-                
-                # Call API to remove edge
                 params = {"u": int(remove_u), "v": int(remove_v)}
                 r = api_get("/graph/edge", params={"u": int(remove_u), "v": int(remove_v)})
                 if not r.json().get("exists"):
@@ -1034,8 +859,6 @@ with tab5:
                     r.raise_for_status()
                     
                     st.success(f"Aresta ({remove_u_label} → {remove_v_label}) removida")
-                    
-                    # Atualizar session state
                     edges_txt = api_download_text("/graph/export_edges", params={"filename": "temp_edges.txt"})
                     edges = []
                     for line in edges_txt.splitlines():
@@ -1054,9 +877,6 @@ with tab5:
     
     st.divider()
     
-    # ========================================
-    # 3. ALTERAR PESO DE ARESTA
-    # ========================================
     st.subheader("Alterar Peso de Aresta")
     
     col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
@@ -1071,30 +891,24 @@ with tab5:
         new_edge_weight = st.number_input("Novo Peso", min_value=0.0, value=1.0, step=0.1, key="new_edge_weight")
     
     with col4:
-        st.write("")  
+        st.write("")
         if st.button("Alterar", use_container_width=True):
             try:
-                # Convert label back to index
                 if mapping:
                     weight_u = [k for k, v in mapping.items() if v == weight_u_label][0]
                     weight_v = [k for k, v in mapping.items() if v == weight_v_label][0]
                 else:
                     weight_u = int(weight_u_label)
                     weight_v = int(weight_v_label)
-                
-                # Check if edge exists
                 r = api_get("/graph/edge", params={"u": int(weight_u), "v": int(weight_v)})
                 if not r.json().get("exists"):
                     st.warning(f"Aresta ({weight_u_label} → {weight_v_label}) não existe. Adicione-a primeiro.")
                 else:
-                    # Call API to set edge weight
                     params = {"u": int(weight_u), "v": int(weight_v), "weight": float(new_edge_weight)}
                     r = api_post("/graph/edge_weight", params=params)
                     r.raise_for_status()
                     
                     st.success(f"Peso da aresta ({weight_u_label} → {weight_v_label}) alterado para {new_edge_weight}")
-                    
-                    # Atualizar session state
                     edges_txt = api_download_text("/graph/export_edges", params={"filename": "temp_edges.txt"})
                     edges = []
                     for line in edges_txt.splitlines():
@@ -1113,9 +927,6 @@ with tab5:
     
     st.divider()
     
-    # ========================================
-    # 4. ALTERAR PESO DE VÉRTICE
-    # ========================================
     st.subheader("Alterar Peso de Vértice")
     
     col1, col2, col3 = st.columns([2, 2, 1])
@@ -1127,17 +938,14 @@ with tab5:
         new_vertex_weight = st.number_input("Novo Peso do Vértice", min_value=0.0, value=0.0, step=0.1, key="new_vertex_weight")
     
     with col3:
-        st.write("")  # spacing
-        st.write("")  # spacing
+        st.write("")
+        st.write("")
         if st.button("Definir Peso", use_container_width=True):
             try:
-                # Convert label back to index
                 if mapping:
                     vertex_id = [k for k, v in mapping.items() if v == vertex_id_label][0]
                 else:
                     vertex_id = int(vertex_id_label)
-                
-                # Call API to set vertex weight
                 params = {"v": int(vertex_id), "weight": float(new_vertex_weight)}
                 r = api_post("/graph/vertex_weight", params=params)
                 r.raise_for_status()
@@ -1148,9 +956,6 @@ with tab5:
     
     st.divider()
     
-    # ========================================
-    # 5. CONSULTAR PESO DE VÉRTICE
-    # ========================================
     st.subheader("Consultar Peso de Vértice")
     
     col1, col2 = st.columns([2, 1])
@@ -1159,17 +964,14 @@ with tab5:
         query_vertex_id_label = st.selectbox("Vértice (v)", vertices, key="query_vertex_id")
     
     with col2:
-        st.write("")  # spacing
-        st.write("")  # spacing
+        st.write("")
+        st.write("")
         if st.button("Consultar", use_container_width=True):
             try:
-                # Convert label back to index
                 if mapping:
                     query_vertex_id = [k for k, v in mapping.items() if v == query_vertex_id_label][0]
                 else:
                     query_vertex_id = int(query_vertex_id_label)
-                
-                # Call API to get vertex weight
                 params = {"v": int(query_vertex_id)}
                 r = api_get("/graph/vertex_weight", params=params)
                 r.raise_for_status()
@@ -1180,14 +982,8 @@ with tab5:
                 st.info(f"**Peso do vértice {query_vertex_id_label}**: {weight}")
             except Exception as e:
                 st.error(f"Erro ao consultar peso do vértice: {e}")
-    
-    # ========================================
-    # VERIFICAÇÕES RÁPIDAS (client-side)
-    # ========================================
     st.divider()
     st.subheader("Verificações Rápidas")
-    # Usamos apenas a API para verificar; a UI converte rótulos em índices.
-
     def label_to_index(label):
         if mapping:
             for k, v in mapping.items():
@@ -1199,8 +995,6 @@ with tab5:
             raise ValueError("Label not found")
         else:
             return int(label)
-
-    # isDivergent: same source, different targets
     with st.expander("isDivergent (mesma origem, alvos diferentes)"):
         c1, c2 = st.columns(2)
         with c1:
@@ -1225,8 +1019,6 @@ with tab5:
                     st.info("Divergente: False")
             except Exception as e:
                 st.error(f"Erro ao verificar divergent: {e}")
-
-    # isConvergent: same target, different sources
     with st.expander("isConvergent (mesmo destino, origens diferentes)"):
         c1, c2 = st.columns(2)
         with c1:
@@ -1251,8 +1043,6 @@ with tab5:
                     st.info("Convergente: False")
             except Exception as e:
                 st.error(f"Erro ao verificar convergent: {e}")
-
-    # isIncident: whether vertex x is incident to edge (u,v)
     with st.expander("isIncident (vértice incidente a aresta)"):
         ic1, ic2 = st.columns(2)
         with ic1:
@@ -1275,8 +1065,6 @@ with tab5:
                     st.info("Incidente: False")
             except Exception as e:
                 st.error(f"Erro ao verificar incident: {e}")
-
-    # isCompleteGraph: check if density == 1.0 (directed complete)
     with st.expander("isCompleteGraph (grafo completo)"):
         if st.button("Verificar Grafo Completo", key="check_complete"):
             try:
@@ -1293,11 +1081,6 @@ with tab5:
             except Exception as e:
                 st.error(f"Erro ao verificar complete: {e}")
 
-
-# ========================================
-# TAB 8: EXPORTAÇÃO
-# ========================================
-
 with tab6:
     st.header("Exportação de Dados")
 
@@ -1308,7 +1091,6 @@ with tab6:
 
     if st.button("Exportar CSV", use_container_width=True):
         try:
-            # Request server to export CSV and return file bytes
             content = api_download_bytes("/graph/export", params={"filename": gephi_filename})
             st.success(f"Arquivo CSV gerado: {gephi_filename}")
 
@@ -1323,11 +1105,6 @@ with tab6:
             st.error(f"Erro ao exportar: {e}")
 
     st.divider()
-
-# ========================================
-# FOOTER
-# ========================================
-
 st.divider()
 st.markdown("""
 <div style='text-align: center; color: #666; padding: 2rem 0;'>

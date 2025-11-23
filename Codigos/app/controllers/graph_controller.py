@@ -6,11 +6,6 @@ from ..models.adjacency_list_graph import AdjacencyListGraph
 
 
 class GraphController:
-    """
-    Controller principal que orquestra a lógica de negócio.
-    Coordena repositories, services e fornece interface unificada.
-    """
-
     def __init__(self):
         self.repository = Neo4jRepository()
         self.builder_service = GraphBuilderService(self.repository)
@@ -19,19 +14,9 @@ class GraphController:
         self.graph_type: Optional[str] = None
 
     def close(self):
-        """Fecha conexões e libera recursos."""
         self.repository.close()
 
-    # ========================================
-    # CONSTRUÇÃO DE GRAFOS
-    # ========================================
-
     def build_graph(self, graph_type: str) -> Dict:
-        """
-        Constrói grafo baseado no tipo especificado.
-        :param graph_type: Tipo do grafo (comments, issues, reviews, integrated)
-        :return: Dicionário com informações do grafo construído
-        """
         self.graph_type = graph_type.lower()
         
         if self.graph_type == "comments":
@@ -44,8 +29,6 @@ class GraphController:
             self.current_graph = self.builder_service.build_integrated_graph()
         else:
             raise ValueError(f"Tipo de grafo inválido: {graph_type}")
-        
-        # Inicializa serviço de análise
         self.analysis_service = GraphAnalysisService(
             self.current_graph,
             self.builder_service.index_to_user
@@ -58,15 +41,7 @@ class GraphController:
             'users': self.builder_service.get_all_users()
         }
 
-    # ========================================
-    # ANÁLISES E MÉTRICAS
-    # ========================================
-
     def calculate_centrality_metrics(self) -> Dict[str, Dict[str, float]]:
-        """
-        Calcula todas as métricas de centralidade.
-        :return: Dicionário com todas as centralidades
-        """
         self._ensure_graph_loaded()
         
         return {
@@ -78,10 +53,6 @@ class GraphController:
         }
 
     def calculate_structure_metrics(self) -> Dict:
-        """
-        Calcula métricas de estrutura e coesão.
-        :return: Dicionário com métricas estruturais
-        """
         self._ensure_graph_loaded()
         
         return {
@@ -92,10 +63,6 @@ class GraphController:
         }
 
     def calculate_community_metrics(self) -> Dict:
-        """
-        Calcula métricas de comunidade.
-        :return: Dicionário com métricas de comunidade
-        """
         self._ensure_graph_loaded()
         
         communities = self.analysis_service.detect_communities()
@@ -110,10 +77,6 @@ class GraphController:
         }
 
     def get_complete_analysis(self) -> Dict:
-        """
-        Retorna análise completa do grafo atual.
-        :return: Dicionário com todas as análises
-        """
         self._ensure_graph_loaded()
         
         return {
@@ -124,12 +87,6 @@ class GraphController:
         }
 
     def get_top_users(self, metric: str, top_n: int = 10) -> List[Tuple[str, float]]:
-        """
-        Retorna top N usuários por métrica específica.
-        :param metric: Nome da métrica (degree, betweenness, etc.)
-        :param top_n: Número de usuários
-        :return: Lista ordenada de usuários
-        """
         self._ensure_graph_loaded()
         
         centrality_metrics = self.calculate_centrality_metrics()
@@ -142,13 +99,7 @@ class GraphController:
             top_n
         )
 
-    # ========================================
-    # EXPORTAÇÃO
-    # ========================================
-
     def export_to_gephi(self, filepath: str) -> bool:
-        """
-        """
         self._ensure_graph_loaded()
         
         try:
@@ -166,8 +117,6 @@ class GraphController:
         os.makedirs(output_dir, exist_ok=True)
         
         files = {}
-        
-        # Exporta centralidades
         centralities = self.calculate_centrality_metrics()
         for metric_name, metric_data in centralities.items():
             filepath = os.path.join(output_dir, f"centrality_{metric_name}.csv")
@@ -179,8 +128,6 @@ class GraphController:
                                          reverse=True):
                     writer.writerow([user, value])
             files[metric_name] = filepath
-        
-        # Exporta comunidades
         community_data = self.calculate_community_metrics()
         comm_filepath = os.path.join(output_dir, "communities.csv")
         with open(comm_filepath, 'w', newline='', encoding='utf-8') as f:
@@ -192,16 +139,7 @@ class GraphController:
         
         return files
 
-    # ========================================
-    # QUERIES ESPECÍFICAS
-    # ========================================
-
     def get_user_interactions(self, username: str) -> Dict:
-        """
-        Retorna informações de interação de um usuário específico.
-        :param username: Nome do usuário
-        :return: Dicionário com estatísticas do usuário
-        """
         self._ensure_graph_loaded()
         
         user_idx = self.builder_service.get_index_from_user(username)
@@ -220,12 +158,6 @@ class GraphController:
         }
 
     def find_shortest_path(self, source: str, target: str) -> List[str]:
-        """
-        Encontra caminho mais curto entre dois usuários.
-        :param source: Usuário origem
-        :param target: Usuário destino
-        :return: Lista de usuários no caminho
-        """
         self._ensure_graph_loaded()
         
         try:
@@ -240,22 +172,13 @@ class GraphController:
         except nx.NodeNotFound:
             raise ValueError("Um dos usuários não existe no grafo")
 
-    # ========================================
-    # HELPERS
-    # ========================================
-
     def _ensure_graph_loaded(self):
-        """Valida se há grafo carregado."""
         if self.current_graph is None or self.analysis_service is None:
             raise RuntimeError(
                 "Nenhum grafo carregado. Execute build_graph() primeiro."
             )
 
     def get_current_graph_info(self) -> Dict:
-        """
-        Retorna informações básicas do grafo atual.
-        :return: Dicionário com informações do grafo
-        """
         if self.current_graph is None:
             return {'loaded': False}
         
@@ -268,21 +191,10 @@ class GraphController:
             'density': self.analysis_service.network_density()
         }
 
-    # ========================================
-    # ANÁLISES ESPECÍFICAS DO TRABALHO
-    # ========================================
-
     def get_most_active_collaborators(self, top_n: int = 10) -> List[Tuple[str, Dict]]:
-        """
-        Identifica colaboradores mais ativos considerando múltiplas métricas.
-        :param top_n: Número de colaboradores
-        :return: Lista com ranking e métricas combinadas
-        """
         self._ensure_graph_loaded()
         
         centralities = self.calculate_centrality_metrics()
-        
-        # Combina métricas com pesos
         combined_scores = {}
         for user in centralities['degree'].keys():
             score = (
@@ -304,11 +216,6 @@ class GraphController:
                      reverse=True)[:top_n]
 
     def identify_key_maintainers(self, top_n: int = 5) -> List[Tuple[str, Dict]]:
-        """
-        Identifica mantenedores-chave (alto PageRank + alto out-degree).
-        :param top_n: Número de mantenedores
-        :return: Lista de mantenedores com métricas
-        """
         self._ensure_graph_loaded()
         
         pagerank = self.analysis_service.pagerank_centrality()
@@ -318,8 +225,6 @@ class GraphController:
             user_idx = self.builder_service.get_index_from_user(user)
             out_deg = self.current_graph.getVertexOutDegree(user_idx)
             in_deg = self.current_graph.getVertexInDegree(user_idx)
-            
-            # Score combinado: PageRank alto + reviews/approvals (out-degree)
             maintainer_score = pr_score * (1 + out_deg * 0.1)
             
             maintainers[user] = {
@@ -335,12 +240,6 @@ class GraphController:
                      reverse=True)[:top_n]
 
     def identify_newcomers(self, min_connections: int = 1, max_connections: int = 5) -> List[Tuple[str, Dict]]:
-        """
-        Identifica novatos (baixa conectividade, mas presentes).
-        :param min_connections: Mínimo de conexões
-        :param max_connections: Máximo de conexões
-        :return: Lista de novatos com métricas
-        """
         self._ensure_graph_loaded()
         
         newcomers = {}
@@ -359,16 +258,10 @@ class GraphController:
                      key=lambda x: x[1]['total_degree'])
 
     def analyze_collaboration_patterns(self) -> Dict:
-        """
-        Analisa padrões de colaboração no repositório.
-        :return: Dicionário com padrões identificados
-        """
         self._ensure_graph_loaded()
         
         structure = self.calculate_structure_metrics()
         communities = self.calculate_community_metrics()
-        
-        # Identifica tipo de rede
         density = structure['density']
         assortativity = structure['assortativity']
         
@@ -378,7 +271,6 @@ class GraphController:
             network_type = "Moderadamente Colaborativa"
         else:
             network_type = "Colaboração Esparsa"
-        
         if assortativity > 0:
             collab_pattern = "Hierárquica (core-contributors interagem entre si)"
         else:
@@ -395,12 +287,6 @@ class GraphController:
         }
 
     def compare_user_influence(self, user1: str, user2: str) -> Dict:
-        """
-        Compara influência entre dois usuários.
-        :param user1: Primeiro usuário
-        :param user2: Segundo usuário
-        :return: Comparação detalhada
-        """
         self._ensure_graph_loaded()
         
         info1 = self.get_user_interactions(user1)
@@ -429,12 +315,6 @@ class GraphController:
         }
 
     def get_collaboration_strength(self, user1: str, user2: str) -> Dict:
-        """
-        Analisa força da colaboração entre dois usuários.
-        :param user1: Primeiro usuário
-        :param user2: Segundo usuário
-        :return: Métricas de colaboração direta
-        """
         self._ensure_graph_loaded()
         
         idx1 = self.builder_service.get_index_from_user(user1)
@@ -442,12 +322,8 @@ class GraphController:
         
         if idx1 == -1 or idx2 == -1:
             raise ValueError("Um ou ambos usuários não encontrados")
-        
-        # Colaboração direta
         edge_1_2 = self.current_graph.getEdgeWeight(idx1, idx2) if self.current_graph.hasEdge(idx1, idx2) else 0
         edge_2_1 = self.current_graph.getEdgeWeight(idx2, idx1) if self.current_graph.hasEdge(idx2, idx1) else 0
-        
-        # Colaboradores em comum
         neighbors1 = set(range(self.current_graph.getVertexCount())) if idx1 < self.current_graph.getVertexCount() else set()
         neighbors1 = {v for v in neighbors1 if self.current_graph.hasEdge(idx1, v)}
         
@@ -470,10 +346,6 @@ class GraphController:
         }
 
     def get_graph_statistics_report(self) -> Dict:
-        """
-        Gera relatório estatístico completo para o trabalho.
-        :return: Relatório detalhado em formato de dicionário
-        """
         self._ensure_graph_loaded()
         
         return {

@@ -1,26 +1,13 @@
-import csv
 from .abstract_graph import AbstractGraph
 
-
 class AdjacencyListGraph(AbstractGraph):
-    """
-    Implementação de grafo direcionado simples utilizando lista de adjacência.
-    Atende à especificação da disciplina, com API obrigatória completa.
-    """
 
     def __init__(self, num_vertices: int):
-        """
-        Construtor da classe AdjacencyListGraph.
-        :param num_vertices: número de vértices do grafo
-        """
         super().__init__(num_vertices)
-        self.adj_list = {i: [] for i in range(num_vertices)}  # dicionário: vértice -> lista de sucessores
-        self.edge_weights = {}  # chave: (u, v), valor: peso da aresta
+        self.adj_list = {i: [] for i in range(num_vertices)}
+        self.edge_weights = {}
         self.vertex_weights = [0.0 for _ in range(num_vertices)]
-        self.edge_count = 0  # <-- ADICIONE ESTA LINHA
-    # ------------------------------
-    # MÉTODOS OBRIGATÓRIOS DA API
-    # ------------------------------
+        self.edge_count = 0
 
     def getVertexCount(self) -> int:
         return self.num_vertices
@@ -34,19 +21,13 @@ class AdjacencyListGraph(AbstractGraph):
         return v in self.adj_list[u]
 
     def addEdge(self, u: int, v: int):
-        """
-        Adiciona uma aresta direcionada de u para v.
-        Restrições:
-        - Não permite laços (u == v)
-        - Não permite múltiplas arestas (idempotente)
-        """
         self._validate_vertex(u)
         self._validate_vertex(v)
         if u == v:
             raise ValueError("Não é permitido laço em grafos simples.")
         if v not in self.adj_list[u]:
             self.adj_list[u].append(v)
-            self.edge_count += 1  # mantém contagem de arestas
+            self.edge_count += 1
 
     def removeEdge(self, u: int, v: int):
         if v in self.adj_list[u]:
@@ -54,19 +35,15 @@ class AdjacencyListGraph(AbstractGraph):
             self.edge_count -= 1
 
     def isSucessor(self, u: int, v: int) -> bool:
-        """Retorna True se v é sucessor direto de u."""
         return self.hasEdge(u, v)
 
     def isPredessor(self, u: int, v: int) -> bool:
-        """Retorna True se u é predecessor direto de v."""
         return self.hasEdge(v, u)
 
     def isDivergent(self, u1: int, v1: int, u2: int, v2: int) -> bool:
-        """Dois arcos são divergentes se possuem a mesma origem (u1 == u2) e destinos diferentes."""
         return u1 == u2 and v1 != v2
 
     def isConvergent(self, u1: int, v1: int, u2: int, v2: int) -> bool:
-        """Dois arcos são convergentes se possuem o mesmo destino (v1 == v2) e origens diferentes."""
         return v1 == v2 and u1 != u2
 
     def isIncident(self, u: int, v: int, x: int) -> bool:
@@ -80,12 +57,10 @@ class AdjacencyListGraph(AbstractGraph):
         return x == u or x == v
 
     def getVertexInDegree(self, u: int) -> int:
-        """Número de arestas que chegam em u."""
         self._validate_vertex(u)
         return sum(1 for adj in self.adj_list.values() if u in adj)
 
     def getVertexOutDegree(self, u: int) -> int:
-        """Número de arestas que saem de u."""
         self._validate_vertex(u)
         return len(self.adj_list[u])
 
@@ -116,31 +91,18 @@ class AdjacencyListGraph(AbstractGraph):
         return True
 
     def isEmptyGraph(self) -> bool:
-        """Retorna True se não há nenhuma aresta."""
         return self.getEdgeCount() == 0
 
     def isCompleteGraph(self) -> bool:
-        """
-        Retorna True se o grafo for direcionado e completo,
-        ou seja, há uma aresta (u,v) para todos os pares u != v.
-        """
         expected_edges = self.num_vertices * (self.num_vertices - 1)
         return self.getEdgeCount() == expected_edges
 
     def exportToGEPHI(self, path: str):
-        """
-        Exporta o grafo para formato CSV (compatível com Gephi).
-        Formato: Source,Target,Weight
-        """
         with open(path, 'w', encoding='utf-8') as f:
-            # Cabeçalho CSV
             f.write('Source,Target,Weight\n')
-            
-            # Arestas
             for u, vizinhos in self.adj_list.items():
                 for v in vizinhos:
                     edge_weight = self.getEdgeWeight(u, v)
-                    # Se houver labels, usa labels; senão usa índices
                     source_label = self.vertex_labels[u] if u < len(self.vertex_labels) else str(u)
                     target_label = self.vertex_labels[v] if v < len(self.vertex_labels) else str(v)
                     f.write(f'{source_label},{target_label},{edge_weight}\n')

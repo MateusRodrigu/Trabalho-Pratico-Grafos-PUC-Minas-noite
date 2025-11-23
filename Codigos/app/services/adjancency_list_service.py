@@ -5,29 +5,15 @@ from ..repositories.neo4j_repository import Neo4jRepository
 
 
 class AdjacencyListService:
-    """
-    Serviço especializado para grafos com lista de adjacência.
-    Otimizado para grafos esparsos (típico de redes sociais/GitHub).
-    """
-
     def __init__(self, repository: Neo4jRepository):
         self.repository = repository
         self.user_to_index: Dict[str, int] = {}
         self.index_to_user: Dict[int, str] = {}
 
-    # ========================================
-    # CONSTRUÇÃO DE GRAFOS
-    # ========================================
-
     def build_graph_from_interactions(
         self, 
         interactions: List[Tuple[str, str, int]]
     ) -> AdjacencyListGraph:
-        """
-        Constrói grafo a partir de interações do Neo4j.
-        :param interactions: Lista de tuplas (source, target, weight)
-        :return: Grafo construído
-        """
         self._build_user_mapping(interactions)
         graph = AdjacencyListGraph(len(self.user_to_index))
         
@@ -45,40 +31,26 @@ class AdjacencyListService:
         return graph
 
     def build_comments_graph(self) -> AdjacencyListGraph:
-        """Constrói grafo de comentários."""
         interactions = self.repository.fetch_comments_interactions()
         return self.build_graph_from_interactions(interactions)
 
     def build_issues_graph(self) -> AdjacencyListGraph:
-        """Constrói grafo de fechamento de issues."""
         interactions = self.repository.fetch_issue_closure_interactions()
         return self.build_graph_from_interactions(interactions)
 
     def build_reviews_graph(self) -> AdjacencyListGraph:
-        """Constrói grafo de revisões/aprovações."""
         interactions = self.repository.fetch_review_interactions()
         return self.build_graph_from_interactions(interactions)
 
     def build_integrated_graph(self) -> AdjacencyListGraph:
-        """Constrói grafo integrado com todas as interações."""
         interactions = self.repository.fetch_integrated_interactions()
         return self.build_graph_from_interactions(interactions)
-
-    # ========================================
-    # ALGORITMOS DE BUSCA
-    # ========================================
 
     def bfs(
         self, 
         graph: AdjacencyListGraph, 
         start: int
     ) -> Dict[int, int]:
-        """
-        Busca em Largura (BFS).
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :return: Dicionário {vértice: distância}
-        """
         graph._validate_vertex(start)
         
         distances = {start: 0}
@@ -101,12 +73,6 @@ class AdjacencyListService:
         graph: AdjacencyListGraph, 
         start: int
     ) -> List[int]:
-        """
-        Busca em Profundidade (DFS) iterativa.
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :return: Lista de vértices visitados
-        """
         graph._validate_vertex(start)
         
         visited = []
@@ -129,12 +95,6 @@ class AdjacencyListService:
         graph: AdjacencyListGraph, 
         start: int
     ) -> List[int]:
-        """
-        Busca em Profundidade (DFS) recursiva.
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :return: Lista de vértices visitados
-        """
         graph._validate_vertex(start)
         
         visited_set = set()
@@ -150,23 +110,12 @@ class AdjacencyListService:
         dfs_helper(start)
         return visited_list
 
-    # ========================================
-    # CAMINHOS E CONECTIVIDADE
-    # ========================================
-
     def find_shortest_path(
         self, 
         graph: AdjacencyListGraph,
         start: int,
         end: int
     ) -> Optional[List[int]]:
-        """
-        Encontra caminho mais curto (BFS).
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :param end: Vértice final
-        :return: Lista de vértices ou None
-        """
         graph._validate_vertex(start)
         graph._validate_vertex(end)
         
@@ -196,14 +145,6 @@ class AdjacencyListService:
         end: int,
         max_length: Optional[int] = None
     ) -> List[List[int]]:
-        """
-        Encontra todos os caminhos simples entre dois vértices.
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :param end: Vértice final
-        :param max_length: Comprimento máximo
-        :return: Lista de caminhos
-        """
         graph._validate_vertex(start)
         graph._validate_vertex(end)
         
@@ -233,12 +174,6 @@ class AdjacencyListService:
         graph: AdjacencyListGraph,
         start: int
     ) -> Tuple[Dict[int, float], Dict[int, Optional[int]]]:
-        """
-        Algoritmo de Dijkstra para caminho mais curto ponderado.
-        :param graph: Grafo
-        :param start: Vértice inicial
-        :return: (distâncias, predecessores)
-        """
         graph._validate_vertex(start)
         
         import heapq
@@ -269,22 +204,12 @@ class AdjacencyListService:
         
         return distances, predecessors
 
-    # ========================================
-    # COMPONENTES E CONECTIVIDADE
-    # ========================================
-
     def find_strongly_connected_components(
         self, 
         graph: AdjacencyListGraph
     ) -> List[Set[int]]:
-        """
-        Algoritmo de Kosaraju para componentes fortemente conectados.
-        :param graph: Grafo
-        :return: Lista de componentes (conjuntos)
-        """
         n = graph.num_vertices
         
-        # Primeira DFS para preencher stack
         visited = [False] * n
         stack = []
         
@@ -299,13 +224,11 @@ class AdjacencyListService:
             if not visited[i]:
                 dfs1(i)
         
-        # Cria grafo transposto
         transpose = {i: [] for i in range(n)}
         for u in range(n):
             for v in graph.adj_list[u]:
                 transpose[v].append(u)
         
-        # Segunda DFS no transposto
         visited = [False] * n
         components = []
         
@@ -329,16 +252,10 @@ class AdjacencyListService:
         self, 
         graph: AdjacencyListGraph
     ) -> List[Set[int]]:
-        """
-        Componentes fracamente conectados (ignora direção).
-        :param graph: Grafo
-        :return: Lista de componentes
-        """
         n = graph.num_vertices
         visited = [False] * n
         components = []
         
-        # Cria grafo não-direcionado
         undirected = defaultdict(list)
         for u in range(n):
             for v in graph.adj_list[u]:
@@ -360,16 +277,7 @@ class AdjacencyListService:
         
         return components
 
-    # ========================================
-    # CICLOS E ORDENAÇÃO TOPOLÓGICA
-    # ========================================
-
     def has_cycle(self, graph: AdjacencyListGraph) -> bool:
-        """
-        Verifica se grafo tem ciclo.
-        :param graph: Grafo
-        :return: True se tem ciclo
-        """
         n = graph.num_vertices
         WHITE, GRAY, BLACK = 0, 1, 2
         color = [WHITE] * n
@@ -394,11 +302,6 @@ class AdjacencyListService:
         self, 
         graph: AdjacencyListGraph
     ) -> Optional[List[int]]:
-        """
-        Encontra um ciclo no grafo.
-        :param graph: Grafo
-        :return: Ciclo (lista de vértices) ou None
-        """
         n = graph.num_vertices
         WHITE, GRAY, BLACK = 0, 1, 2
         color = [WHITE] * n
@@ -409,7 +312,6 @@ class AdjacencyListService:
             
             for v in graph.adj_list[u]:
                 if color[v] == GRAY:
-                    # Reconstrói ciclo
                     cycle = [v]
                     current = u
                     while current != v:
@@ -438,11 +340,6 @@ class AdjacencyListService:
         self, 
         graph: AdjacencyListGraph
     ) -> Optional[List[int]]:
-        """
-        Ordenação topológica (Kahn's algorithm).
-        :param graph: Grafo
-        :return: Lista ordenada ou None se tem ciclo
-        """
         n = graph.num_vertices
         in_degree = [0] * n
         
@@ -464,23 +361,12 @@ class AdjacencyListService:
         
         return result if len(result) == n else None
 
-    # ========================================
-    # MÉTRICAS E ANÁLISES
-    # ========================================
-
     def get_k_hop_neighbors(
         self, 
         graph: AdjacencyListGraph,
         vertex: int,
         k: int
     ) -> Set[int]:
-        """
-        Vizinhos a k saltos de distância.
-        :param graph: Grafo
-        :param vertex: Vértice central
-        :param k: Número de saltos
-        :return: Conjunto de vizinhos
-        """
         graph._validate_vertex(vertex)
         
         if k == 0:
@@ -508,12 +394,6 @@ class AdjacencyListService:
         graph: AdjacencyListGraph,
         vertex: int
     ) -> float:
-        """
-        Coeficiente de aglomeração local.
-        :param graph: Grafo
-        :param vertex: Vértice
-        :return: Coeficiente [0, 1]
-        """
         graph._validate_vertex(vertex)
         
         neighbors = set(graph.adj_list[vertex])
@@ -537,11 +417,6 @@ class AdjacencyListService:
         self, 
         graph: AdjacencyListGraph
     ) -> float:
-        """
-        Comprimento médio de caminho.
-        :param graph: Grafo
-        :return: Comprimento médio
-        """
         n = graph.num_vertices
         total_distance = 0
         count = 0
@@ -559,11 +434,6 @@ class AdjacencyListService:
         self, 
         graph: AdjacencyListGraph
     ) -> int:
-        """
-        Diâmetro do grafo (maior distância entre pares).
-        :param graph: Grafo
-        :return: Diâmetro
-        """
         n = graph.num_vertices
         max_distance = 0
         
@@ -575,21 +445,11 @@ class AdjacencyListService:
         
         return max_distance
 
-    # ========================================
-    # UTILIDADES
-    # ========================================
-
     def get_out_neighbors_with_weights(
         self, 
         graph: AdjacencyListGraph,
         vertex: int
     ) -> List[Tuple[int, float]]:
-        """
-        Vizinhos de saída com pesos.
-        :param graph: Grafo
-        :param vertex: Vértice
-        :return: Lista de tuplas (vizinho, peso)
-        """
         graph._validate_vertex(vertex)
         return [(v, graph.getEdgeWeight(vertex, v)) for v in graph.adj_list[vertex]]
 
@@ -598,12 +458,6 @@ class AdjacencyListService:
         graph: AdjacencyListGraph,
         vertex: int
     ) -> List[int]:
-        """
-        Vizinhos de entrada (predecessores).
-        :param graph: Grafo
-        :param vertex: Vértice
-        :return: Lista de predecessores
-        """
         graph._validate_vertex(vertex)
         predecessors = []
         
@@ -617,11 +471,6 @@ class AdjacencyListService:
         self, 
         graph: AdjacencyListGraph
     ) -> List[Tuple[int, int]]:
-        """
-        Arestas bidirecionais (recíprocas).
-        :param graph: Grafo
-        :return: Lista de pares (u, v)
-        """
         reciprocal = []
         visited = set()
         
@@ -640,7 +489,6 @@ class AdjacencyListService:
         graph: AdjacencyListGraph,
         filepath: str
     ):
-
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write("# Source Target Weight\n")
             for u in range(graph.num_vertices):
@@ -649,7 +497,6 @@ class AdjacencyListService:
                     f.write(f"{u} {v} {weight}\n")
 
     def _build_user_mapping(self, interactions: List[Tuple[str, str, int]]):
-
         unique_users = set()
         for source, target, _ in interactions:
             unique_users.add(source)
