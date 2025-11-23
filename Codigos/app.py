@@ -506,7 +506,7 @@ with tab4:
                     else:
                         st.error(" **Rede esparsa** - Poucas conexões, colaboração limitada")
                     
-                    st.info(" **Significado:** Indica o quão colaborativa é a rede como um todo. Valores altos sugerem que os colaboradores interagem amplamente entre si.")
+                   
                     
                 except Exception as e:
                     st.error(f"Erro: {e}")
@@ -524,18 +524,12 @@ with tab4:
                     G_undirected = G.to_undirected()
 
                     avg_clustering = nx.average_clustering(G_undirected)
-                    transitivity = nx.transitivity(G_undirected)
 
                     clustering_coeffs = nx.clustering(G_undirected)
                     top_clustered = sorted(clustering_coeffs.items(), key=lambda x: x[1], reverse=True)[:10]
                     
                     st.metric("Coef. Aglomeração Médio", f"{avg_clustering:.4f}")
-                    st.metric("Transitividade Global", f"{transitivity:.4f}")
                     
-                    st.divider()
-                    st.write("**Top 10 Colaboradores mais \"Clustered\":**")
-                    df_cluster = pd.DataFrame(top_clustered, columns=['Colaborador', 'Coeficiente'])
-                    st.dataframe(df_cluster, use_container_width=True)
                     
                     st.divider()
                     st.write("**Interpretação:**")
@@ -546,7 +540,7 @@ with tab4:
                     else:
                         st.warning(" **Baixa formação de clusters** - Colaboração mais distribuída")
                     
-                    st.info(" **Significado:** Mede a tendência de colaboradores formarem pequenos grupos muito conectados (\"clusters\"). Valores altos indicam times informais bem definidos.")
+                
                     
                 except Exception as e:
                     st.error(f"Erro: {e}")
@@ -580,14 +574,6 @@ with tab4:
                             'target_degree': G.degree(v)
                         })
                     
-                    if edge_degrees:
-                        df_assort = pd.DataFrame(edge_degrees)
-                        fig = px.scatter(df_assort, x='source_degree', y='target_degree',
-                                        title='Assortatividade: Grau Origem vs Destino',
-                                        labels={'source_degree': 'Grau do Colaborador Origem',
-                                               'target_degree': 'Grau do Colaborador Destino'},
-                                        opacity=0.5)
-                        st.plotly_chart(fig, use_container_width=True)
                     
                     st.divider()
                     st.write("**Interpretação:**")
@@ -598,7 +584,6 @@ with tab4:
                     else:
                         st.warning(" **Rede disassortativa** - Colaboradores muito conectados interagem com colaboradores menos conectados (rede mais distribuída)")
                     
-                    st.info("💡 **Significado:** Mostra se colaboradores com muitas conexões tendem a se conectar entre si (assortativa > 0) ou se interagem mais com colaboradores menos conectados (disassortativa < 0).")
                     
                 except Exception as e:
                     st.error(f"Erro: {e}")
@@ -710,7 +695,7 @@ with tab4:
                     
                     top_bridges = sorted(bridge_scores.items(), 
                                         key=lambda x: x[1]['bridge_score'], 
-                                        reverse=True)[:15]
+                                        reverse=True)[:10]
                     
                     if top_bridges:
                         st.success(f" **{len(bridge_scores)} colaboradores atuam como pontes**")
@@ -746,9 +731,7 @@ with tab4:
                         else:
                             st.warning("**Pontes limitadas** - Poucas conexões entre comunidades diferentes")
                         
-                        st.info(" **Significado:** Identifica colaboradores que conectam diferentes comunidades, atuando como elo entre grupos que, de outra forma, seriam isolados. Esses colaboradores são críticos para a integração do projeto.")
-                    else:
-                        st.warning("Nenhuma ponte significativa detectada")
+                        
                     
                 except Exception as e:
                     st.error(f"Erro ao analisar pontes: {e}")
