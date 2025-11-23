@@ -1137,11 +1137,7 @@ with tab5:
     # ========================================
     st.divider()
     st.subheader("Verificações Rápidas")
-
-    # Rebuild local structures (fresh from session state)
-    edges = st.session_state.edges
-    mapping = st.session_state.mapping
-    num_vertices, adjacency, in_adj, weight_map = build_graph_structures(edges, mapping)
+    # Usamos apenas a API para verificar; a UI converte rótulos em índices.
 
     def label_to_index(label):
         if mapping:
@@ -1170,13 +1166,12 @@ with tab5:
                 v1 = label_to_index(d_v1)
                 u2 = label_to_index(d_u2)
                 v2 = label_to_index(d_v2)
-                is_div = (u1 == u2) and (v1 != v2)
-                exists1 = v1 in adjacency.get(int(u1), [])
-                exists2 = v2 in adjacency.get(int(u2), [])
-                if is_div and exists1 and exists2:
-                    st.success("Divergente: True — mesma origem, alvos diferentes e ambas as arestas existem")
-                elif is_div:
-                    st.warning("Mesmo origem e alvos diferentes, mas uma ou ambas as arestas não existem")
+                params = {"u1": int(u1), "v1": int(v1), "u2": int(u2), "v2": int(v2)}
+                r = api_get("/graph/is_divergent", params=params)
+                r.raise_for_status()
+                data = r.json()
+                if data.get("is_divergent"):
+                    st.success("Divergente: True")
                 else:
                     st.info("Divergente: False")
             except Exception as e:
@@ -1197,13 +1192,12 @@ with tab5:
                 v1 = label_to_index(c_v1)
                 u2 = label_to_index(c_u2)
                 v2 = label_to_index(c_v2)
-                is_conv = (v1 == v2) and (u1 != u2)
-                exists1 = v1 in adjacency.get(int(u1), [])
-                exists2 = v2 in adjacency.get(int(u2), [])
-                if is_conv and exists1 and exists2:
-                    st.success("Convergente: True — mesmo destino, origens diferentes e ambas as arestas existem")
-                elif is_conv:
-                    st.warning("Mesmo destino e origens diferentes, mas uma ou ambas as arestas não existem")
+                params = {"u1": int(u1), "v1": int(v1), "u2": int(u2), "v2": int(v2)}
+                r = api_get("/graph/is_convergent", params=params)
+                r.raise_for_status()
+                data = r.json()
+                if data.get("is_convergent"):
+                    st.success("Convergente: True")
                 else:
                     st.info("Convergente: False")
             except Exception as e:
@@ -1222,13 +1216,12 @@ with tab5:
                 u = label_to_index(i_u)
                 v = label_to_index(i_v)
                 x = label_to_index(i_x)
-                incident = (x == u) or (x == v)
-                # also check if edge exists
-                edge_exists = v in adjacency.get(int(u), [])
-                if incident and edge_exists:
-                    st.success(f"Incidente: True — {i_x} é incidente à aresta ({i_u} → {i_v}) e a aresta existe")
-                elif incident:
-                    st.warning(f"{i_x} corresponde a u ou v, mas a aresta ({i_u} → {i_v}) não existe")
+                params = {"u": int(u), "v": int(v), "x": int(x)}
+                r = api_get("/graph/is_incident", params=params)
+                r.raise_for_status()
+                data = r.json()
+                if data.get("is_incident"):
+                    st.success("Incidente: True")
                 else:
                     st.info("Incidente: False")
             except Exception as e:

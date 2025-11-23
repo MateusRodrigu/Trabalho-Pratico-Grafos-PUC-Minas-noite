@@ -490,8 +490,9 @@ def is_divergent(u1: int = Query(...), v1: int = Query(...), u2: int = Query(...
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
-        result = (u1 == u2 and v1 != v2)
-        return {"is_divergent": result}
+        g = _ensure_graph(prefer=implementation)
+        result = g.isDivergent(u1, v1, u2, v2)
+        return {"is_divergent": bool(result)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -502,8 +503,9 @@ def is_convergent(u1: int = Query(...), v1: int = Query(...), u2: int = Query(..
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
-        result = (v1 == v2 and u1 != u2)
-        return {"is_convergent": result}
+        g = _ensure_graph(prefer=implementation)
+        result = g.isConvergent(u1, v1, u2, v2)
+        return {"is_convergent": bool(result)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -514,8 +516,9 @@ def is_incident(u: int = Query(...), v: int = Query(...), x: int = Query(...), i
     if graph_obj is None:
         raise HTTPException(status_code=404, detail="No graph loaded")
     try:
-        result = (x == u or x == v)
-        return {"is_incident": result}
+        g = _ensure_graph(prefer=implementation)
+        result = g.isIncident(u, v, x)
+        return {"is_incident": bool(result)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
