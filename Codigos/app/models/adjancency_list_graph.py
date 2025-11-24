@@ -6,7 +6,7 @@ class AdjacencyListGraph(AbstractGraph):
         super().__init__(num_vertices)
         self.adj_list = {i: [] for i in range(num_vertices)}
         self.edge_weights = {}
-        self.vertex_weights = [0.0 for _ in range(num_vertices)]
+        self.vertex_weights = [1 for _ in range(num_vertices)]
         self.edge_count = 0
 
     def getVertexCount(self) -> int:
