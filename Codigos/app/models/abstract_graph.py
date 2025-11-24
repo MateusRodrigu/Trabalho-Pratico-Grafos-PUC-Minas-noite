@@ -7,7 +7,8 @@ class AbstractGraph(ABC):
             raise ValueError("O número de vértices deve ser positivo.")
         self.num_vertices = num_vertices
         self.vertex_labels = [str(i) for i in range(num_vertices)]
-        self.vertex_weights = [0.0 for _ in range(num_vertices)]
+        # todos os vértices começam com peso 1.0 por padrão
+        self.vertex_weights = [1.0 for _ in range(num_vertices)]
 
 
     def _validate_vertex(self, v: int):

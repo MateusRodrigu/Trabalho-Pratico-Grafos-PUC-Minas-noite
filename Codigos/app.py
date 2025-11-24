@@ -929,7 +929,7 @@ with tab5:
                 else:
                     vertex_id = int(vertex_id_label)
                 params = {"v": int(vertex_id), "weight": float(new_vertex_weight)}
-                r = api_post("/graph/vertex_weight", params=params)
+                r = requests.post(urljoin(API_BASE, "/graph/vertex_weight"), params=params)
                 r.raise_for_status()
                 
                 st.success(f"Peso do vértice {vertex_id_label} definido como {new_vertex_weight}")
