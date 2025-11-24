@@ -181,18 +181,21 @@ def api_dfs(start_index: Optional[int] = Query(None), start_user: Optional[str] 
 @app.get("/graph/shortest_path")
 def api_shortest_path(source_index: Optional[int] = Query(None), target_index: Optional[int] = Query(None), source_user: Optional[str] = Query(None), target_user: Optional[str] = Query(None), implementation: Optional[str] = Query(None)):
     svc, g = _get_current_service(prefer=implementation)
+    _ensure_repo_services()
+    global list_service
+
     if source_index is None and source_user is None:
         raise HTTPException(status_code=400, detail="Provide source_index or source_user")
     if target_index is None and target_user is None:
         raise HTTPException(status_code=400, detail="Provide target_index or target_user")
     if source_user is not None:
-        if source_user not in svc.user_to_index:
+        if source_user not in list_service.user_to_index:
             raise HTTPException(status_code=404, detail="source user not found in mapping")
-        source_index = svc.user_to_index[source_user]
+        source_index = list_service.user_to_index[source_user]
     if target_user is not None:
-        if target_user not in svc.user_to_index:
+        if target_user not in list_service.user_to_index:
             raise HTTPException(status_code=404, detail="target user not found in mapping")
-        target_index = svc.user_to_index[target_user]
+        target_index = list_service.user_to_index[target_user]
     try:
         path = svc.find_shortest_path(g, source_index, target_index)
         return {"path": path}
